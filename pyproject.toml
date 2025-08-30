@@ -1,7 +1,7 @@
 [project]
 name = "rdtools"
 version = "0.1.0"
-description = "High-performance molecular operations using RDKit's C++ core through pybind11 bindings"
+description = "High-performance molecular operations using RDKit's C++ core through nanobind bindings"
 readme = "README.md"
 authors = [
     { name = "wuhao", email = "wuhao@novogaia.bio" }
@@ -31,14 +31,14 @@ keywords = ["chemistry", "cheminformatics", "rdkit", "molecular", "descriptors"]
 minimum-version = "0.10"
 build-dir = "build/{wheel_tag}"
 cmake.version = ">=3.15"
-logging.level = "INFO"
-
-# Install the compiled module into the rdtools package
-wheel.install-dir = ""
 
 # CMake configuration for finding RDKit
 cmake.define.CMAKE_BUILD_TYPE = "Release"
 cmake.define.CMAKE_CXX_STANDARD = "17"
+logging.level = "INFO"
+
+# Install the compiled module into the rdtools package
+wheel.install-dir = ""
 
 # SDist configuration
 sdist.include = [
@@ -58,9 +58,14 @@ sdist.exclude = [
 [build-system]
 requires = [
     "scikit-build-core>=0.10",
-    "pybind11>=2.10.0",
+    "nanobind>=2.0.0",
 ]
 build-backend = "scikit_build_core.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1",
+]
 
 [tool.black]
 line-length = 88

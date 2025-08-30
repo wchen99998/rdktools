@@ -10,7 +10,7 @@
 
 namespace rdtools {
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
 // Helper function to create molecule from SMILES
 std::unique_ptr<RDKit::ROMol> smiles_to_mol(const std::string& smiles) {
@@ -22,111 +22,123 @@ std::unique_ptr<RDKit::ROMol> smiles_to_mol(const std::string& smiles) {
     }
 }
 
-py::array_t<double> calculate_molecular_weights(const std::vector<std::string>& smiles_list) {
+nb::ndarray<nb::numpy, double> calculate_molecular_weights(const std::vector<std::string>& smiles_list) {
     size_t size = smiles_list.size();
     
-    // Create output array
-    auto result = py::array_t<double>(size);
-    auto result_buf = result.request();
-    auto* result_ptr = static_cast<double*>(result_buf.ptr);
+    // Allocate memory for result
+    double* data = new double[size];
     
     // Process each SMILES
     for (size_t i = 0; i < size; ++i) {
         auto mol = smiles_to_mol(smiles_list[i]);
         if (mol) {
-            result_ptr[i] = RDKit::Descriptors::calcAMW(*mol);
+            data[i] = RDKit::Descriptors::calcAMW(*mol);
         } else {
-            result_ptr[i] = std::numeric_limits<double>::quiet_NaN();
+            data[i] = std::numeric_limits<double>::quiet_NaN();
         }
     }
     
-    return result;
+    // Create nanobind capsule for memory management
+    nb::capsule owner(data, [](void *p) noexcept {
+        delete[] static_cast<double*>(p);
+    });
+    
+    // Create nanobind ndarray
+    return nb::ndarray<nb::numpy, double>(data, {size}, owner);
 }
 
-py::array_t<double> calculate_logp(const std::vector<std::string>& smiles_list) {
+nb::ndarray<nb::numpy, double> calculate_logp(const std::vector<std::string>& smiles_list) {
     size_t size = smiles_list.size();
     
-    auto result = py::array_t<double>(size);
-    auto result_buf = result.request();
-    auto* result_ptr = static_cast<double*>(result_buf.ptr);
+    double* data = new double[size];
     
     for (size_t i = 0; i < size; ++i) {
         auto mol = smiles_to_mol(smiles_list[i]);
         if (mol) {
-            result_ptr[i] = RDKit::Descriptors::calcClogP(*mol);
+            data[i] = RDKit::Descriptors::calcClogP(*mol);
         } else {
-            result_ptr[i] = std::numeric_limits<double>::quiet_NaN();
+            data[i] = std::numeric_limits<double>::quiet_NaN();
         }
     }
     
-    return result;
+    nb::capsule owner(data, [](void *p) noexcept {
+        delete[] static_cast<double*>(p);
+    });
+    
+    return nb::ndarray<nb::numpy, double>(data, {size}, owner);
 }
 
-py::array_t<double> calculate_tpsa(const std::vector<std::string>& smiles_list) {
+nb::ndarray<nb::numpy, double> calculate_tpsa(const std::vector<std::string>& smiles_list) {
     size_t size = smiles_list.size();
     
-    auto result = py::array_t<double>(size);
-    auto result_buf = result.request();
-    auto* result_ptr = static_cast<double*>(result_buf.ptr);
+    double* data = new double[size];
     
     for (size_t i = 0; i < size; ++i) {
         auto mol = smiles_to_mol(smiles_list[i]);
         if (mol) {
-            result_ptr[i] = RDKit::Descriptors::calcTPSA(*mol);
+            data[i] = RDKit::Descriptors::calcTPSA(*mol);
         } else {
-            result_ptr[i] = std::numeric_limits<double>::quiet_NaN();
+            data[i] = std::numeric_limits<double>::quiet_NaN();
         }
     }
     
-    return result;
+    nb::capsule owner(data, [](void *p) noexcept {
+        delete[] static_cast<double*>(p);
+    });
+    
+    return nb::ndarray<nb::numpy, double>(data, {size}, owner);
 }
 
-py::array_t<bool> validate_smiles(const std::vector<std::string>& smiles_list) {
+nb::ndarray<nb::numpy, bool> validate_smiles(const std::vector<std::string>& smiles_list) {
     size_t size = smiles_list.size();
     
-    auto result = py::array_t<bool>(size);
-    auto result_buf = result.request();
-    auto* result_ptr = static_cast<bool*>(result_buf.ptr);
+    bool* data = new bool[size];
     
     for (size_t i = 0; i < size; ++i) {
         auto mol = smiles_to_mol(smiles_list[i]);
-        result_ptr[i] = (mol != nullptr);
+        data[i] = (mol != nullptr);
     }
     
-    return result;
+    nb::capsule owner(data, [](void *p) noexcept {
+        delete[] static_cast<bool*>(p);
+    });
+    
+    return nb::ndarray<nb::numpy, bool>(data, {size}, owner);
 }
 
-py::dict calculate_multiple_descriptors(const std::vector<std::string>& smiles_list) {
+nb::dict calculate_multiple_descriptors(const std::vector<std::string>& smiles_list) {
     size_t size = smiles_list.size();
     
-    // Create output arrays
-    auto mw_result = py::array_t<double>(size);
-    auto logp_result = py::array_t<double>(size);
-    auto tpsa_result = py::array_t<double>(size);
-    
-    auto mw_buf = mw_result.request();
-    auto logp_buf = logp_result.request();
-    auto tpsa_buf = tpsa_result.request();
-    
-    auto* mw_ptr = static_cast<double*>(mw_buf.ptr);
-    auto* logp_ptr = static_cast<double*>(logp_buf.ptr);
-    auto* tpsa_ptr = static_cast<double*>(tpsa_buf.ptr);
+    // Allocate memory for arrays
+    double* mw_data = new double[size];
+    double* logp_data = new double[size];
+    double* tpsa_data = new double[size];
     
     // Process each SMILES once and calculate all descriptors
     for (size_t i = 0; i < size; ++i) {
         auto mol = smiles_to_mol(smiles_list[i]);
         if (mol) {
-            mw_ptr[i] = RDKit::Descriptors::calcAMW(*mol);
-            logp_ptr[i] = RDKit::Descriptors::calcClogP(*mol);
-            tpsa_ptr[i] = RDKit::Descriptors::calcTPSA(*mol);
+            mw_data[i] = RDKit::Descriptors::calcAMW(*mol);
+            logp_data[i] = RDKit::Descriptors::calcClogP(*mol);
+            tpsa_data[i] = RDKit::Descriptors::calcTPSA(*mol);
         } else {
-            mw_ptr[i] = std::numeric_limits<double>::quiet_NaN();
-            logp_ptr[i] = std::numeric_limits<double>::quiet_NaN();
-            tpsa_ptr[i] = std::numeric_limits<double>::quiet_NaN();
+            mw_data[i] = std::numeric_limits<double>::quiet_NaN();
+            logp_data[i] = std::numeric_limits<double>::quiet_NaN();
+            tpsa_data[i] = std::numeric_limits<double>::quiet_NaN();
         }
     }
     
-    py::dict result;
+    // Create capsules for memory management
+    nb::capsule mw_owner(mw_data, [](void *p) noexcept { delete[] static_cast<double*>(p); });
+    nb::capsule logp_owner(logp_data, [](void *p) noexcept { delete[] static_cast<double*>(p); });
+    nb::capsule tpsa_owner(tpsa_data, [](void *p) noexcept { delete[] static_cast<double*>(p); });
+    
+    // Create arrays
+    auto mw_result = nb::ndarray<nb::numpy, double>(mw_data, {size}, mw_owner);
+    auto logp_result = nb::ndarray<nb::numpy, double>(logp_data, {size}, logp_owner);
+    auto tpsa_result = nb::ndarray<nb::numpy, double>(tpsa_data, {size}, tpsa_owner);
+    
+    nb::dict result;
     result["molecular_weight"] = mw_result;
     result["logp"] = logp_result;
     result["tpsa"] = tpsa_result;
@@ -150,17 +162,15 @@ std::vector<std::string> canonicalize_smiles(const std::vector<std::string>& smi
     return result;
 }
 
-py::array_t<uint8_t> calculate_morgan_fingerprints(
+nb::ndarray<nb::numpy, uint8_t> calculate_morgan_fingerprints(
     const std::vector<std::string>& smiles_list,
     int radius,
     int nbits
 ) {
     size_t size = smiles_list.size();
     
-    // Create 2D output array (size x nbits)
-    auto result = py::array_t<uint8_t>({size, static_cast<size_t>(nbits)});
-    auto result_buf = result.request();
-    auto* result_ptr = static_cast<uint8_t*>(result_buf.ptr);
+    // Allocate memory for 2D array (size x nbits)
+    uint8_t* data = new uint8_t[size * nbits];
     
     for (size_t i = 0; i < size; ++i) {
         auto mol = smiles_to_mol(smiles_list[i]);
@@ -170,23 +180,28 @@ py::array_t<uint8_t> calculate_morgan_fingerprints(
                 
                 // Copy bits to result array
                 for (int j = 0; j < nbits; ++j) {
-                    result_ptr[i * nbits + j] = fp->getBit(j) ? 1 : 0;
+                    data[i * nbits + j] = fp->getBit(j) ? 1 : 0;
                 }
             } catch (const std::exception& e) {
                 // On error, set all bits to 0
                 for (int j = 0; j < nbits; ++j) {
-                    result_ptr[i * nbits + j] = 0;
+                    data[i * nbits + j] = 0;
                 }
             }
         } else {
             // Invalid SMILES, set all bits to 0
             for (int j = 0; j < nbits; ++j) {
-                result_ptr[i * nbits + j] = 0;
+                data[i * nbits + j] = 0;
             }
         }
     }
     
-    return result;
+    nb::capsule owner(data, [](void *p) noexcept {
+        delete[] static_cast<uint8_t*>(p);
+    });
+    
+    // Create 2D nanobind ndarray
+    return nb::ndarray<nb::numpy, uint8_t>(data, {size, static_cast<size_t>(nbits)}, owner);
 }
 
 } // namespace rdtools

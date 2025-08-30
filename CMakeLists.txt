@@ -6,8 +6,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Find required packages
-set(PYBIND11_FINDPYTHON ON)
-find_package(pybind11 CONFIG REQUIRED)
+find_package(Python COMPONENTS Interpreter Development REQUIRED)
+find_package(nanobind CONFIG REQUIRED)
 
 # Find RDKit
 # First try to find RDKit via CMake config
@@ -120,8 +120,8 @@ endif()
 message(STATUS "Found RDKit include dir: ${RDKit_INCLUDE_DIRS}")
 message(STATUS "Found RDKit libraries: ${RDKit_LIBRARIES}")
 
-# Create the pybind11 module (will be installed into rdtools package)
-pybind11_add_module(_rdtools_core
+# Create the nanobind module (will be installed into rdtools package)
+nanobind_add_module(_rdtools_core
     src/cpp/pybind_module.cpp
     src/cpp/molecular_ops.cpp
 )
