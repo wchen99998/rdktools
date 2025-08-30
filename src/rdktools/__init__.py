@@ -234,6 +234,14 @@ def batch_process(
     return results
 
 
+# TensorFlow ops (optional)
+try:
+    from . import tf_ops  # noqa: F401
+    _TF_OPS_AVAILABLE = True
+except ImportError:
+    _TF_OPS_AVAILABLE = False
+
+
 # Version and metadata
 __version__ = "0.1.0"
 __all__ = [
@@ -247,3 +255,7 @@ __all__ = [
     "filter_valid",
     "batch_process",
 ]
+
+# Add TensorFlow ops to exports if available
+if _TF_OPS_AVAILABLE:
+    __all__.append("tf_ops")

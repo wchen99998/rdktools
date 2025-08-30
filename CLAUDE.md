@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 RDTools is a Python library that provides high-performance molecular operations using RDKit's C++ core through pybind11 bindings. It enables fast molecular descriptor calculations, SMILES validation, and fingerprint generation by exposing RDKit's optimized C++ implementation with native numpy array support.
 
+Put tests under tests/ and examples under examples/ directory respectively
+
 ## Architecture
 
 ### Core Components
@@ -24,6 +26,13 @@ RDTools is a Python library that provides high-performance molecular operations 
    - Uses scikit-build-core with CMake for C++ compilation
    - CMakeLists.txt handles RDKit dependency detection and linking
    - Supports multiple RDKit installation methods (apt, conda, homebrew)
+   - Automatically builds TensorFlow custom operations when TensorFlow is available
+
+4. **TensorFlow Integration** (`src/rdktools/tf_ops.py`):
+   - Custom C++ operations for TensorFlow data pipelines
+   - String-to-string processing operations compatible with tf.data
+   - Built automatically during main build process when TensorFlow is present
+   - Graceful fallback when TensorFlow is not available
 
 ### Data Flow
 
@@ -60,6 +69,27 @@ uv run pytest tests/test_rdtools.py::TestBasicFunctions::test_molecular_weights
 # Code formatting
 uv run black src/
 uv run isort src/
+
+# Build wheel for distribution
+uv build
+uv run auditwheel repair dist/*.whl --exclude "libtensorflow*"
+```
+
+### Pip compatible
+uv pip install 
+
+### TensorFlow Custom Ops
+TensorFlow custom operations are now automatically built as part of the main build process when TensorFlow is available.
+
+```bash
+# Install with TensorFlow support (TensorFlow ops built automatically)
+uv sync
+
+# Test TensorFlow ops
+uv run python test_tf_op.py
+
+# Run TensorFlow pipeline example
+uv run python example_tf_pipeline.py
 ```
 
 ### Build Troubleshooting
@@ -67,13 +97,11 @@ uv run isort src/
 # Check RDKit installation
 python -c "import rdkit; print(rdkit.__version__)"
 
-# Clean build (if build issues occur)
-rm -rf build/ && uv run python -m pip install -e .
+# Check TensorFlow installation
+python -c "import tensorflow as tf; print(tf.__version__)"
 
-# Debug build with CMake directly
-mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Debug
-make VERBOSE=1
+# Clean build (if build issues occur)
+rm -rf build/ dist/ && uv build
 ```
 
 ## Key Implementation Details
@@ -109,8 +137,9 @@ make VERBOSE=1
 
 ## Dependencies
 
-- **Build-time**: scikit-build-core, pybind11, CMake, RDKit C++ libraries
+- **Build-time**: scikit-build-core, nanobind, CMake, RDKit C++ libraries
 - **Runtime**: numpy, RDKit Python bindings (optional but recommended for validation)
+- **Optional**: TensorFlow >=2.20.0 (enables custom TensorFlow operations for data pipelines)
 - **Python**: >=3.12 (specified in pyproject.toml)
 
 ## Development Notes

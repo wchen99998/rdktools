@@ -9,6 +9,51 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(Python COMPONENTS Interpreter Development REQUIRED)
 find_package(nanobind CONFIG REQUIRED)
 
+# Find TensorFlow (optional - for TensorFlow custom ops)
+find_package(PkgConfig QUIET)
+if(PkgConfig_FOUND)
+    pkg_check_modules(TensorFlow QUIET tensorflow)
+endif()
+
+# Alternative: Try to find TensorFlow via Python
+if(NOT TensorFlow_FOUND)
+    execute_process(
+        COMMAND ${Python_EXECUTABLE} -c "import tensorflow as tf; print(tf.sysconfig.get_include(), end='')"
+        OUTPUT_VARIABLE TensorFlow_INCLUDE_DIR
+        ERROR_QUIET
+        RESULT_VARIABLE TF_INCLUDE_RESULT
+    )
+    
+    execute_process(
+        COMMAND ${Python_EXECUTABLE} -c "import tensorflow as tf; print(tf.sysconfig.get_lib(), end='')"
+        OUTPUT_VARIABLE TensorFlow_LIB_DIR
+        ERROR_QUIET
+        RESULT_VARIABLE TF_LIB_RESULT
+    )
+    
+    if(TF_INCLUDE_RESULT EQUAL 0 AND TF_LIB_RESULT EQUAL 0 AND TensorFlow_INCLUDE_DIR AND TensorFlow_LIB_DIR)
+        set(TensorFlow_FOUND TRUE)
+        set(TensorFlow_INCLUDE_DIRS ${TensorFlow_INCLUDE_DIR})
+        set(TensorFlow_LIBRARY_DIRS ${TensorFlow_LIB_DIR})
+        message(STATUS "Found TensorFlow via Python: include=${TensorFlow_INCLUDE_DIR}, lib=${TensorFlow_LIB_DIR}")
+        
+        # Find the TensorFlow framework library
+        find_library(TensorFlow_FRAMEWORK_LIBRARY
+            NAMES tensorflow_framework
+            PATHS ${TensorFlow_LIB_DIR}
+            NO_DEFAULT_PATH
+        )
+        
+        if(TensorFlow_FRAMEWORK_LIBRARY)
+            message(STATUS "Found TensorFlow framework library: ${TensorFlow_FRAMEWORK_LIBRARY}")
+        else()
+            message(STATUS "TensorFlow framework library not found - building without TF framework linking")
+        endif()
+    else()
+        message(STATUS "TensorFlow detection failed: include_result=${TF_INCLUDE_RESULT}, lib_result=${TF_LIB_RESULT}")
+    endif()
+endif()
+
 # Find RDKit
 # First try to find RDKit via CMake config
 find_package(RDKit CONFIG QUIET)
@@ -167,3 +212,60 @@ endif()
 # Install the extension module into the rdktools package directory so that
 # rdktools/__init__.py can import ._rdktools_core
 install(TARGETS _rdktools_core DESTINATION rdktools)
+
+# TensorFlow custom op (optional)
+if(TensorFlow_FOUND)
+    message(STATUS "Found TensorFlow include dir: ${TensorFlow_INCLUDE_DIRS}")
+    message(STATUS "Found TensorFlow lib dir: ${TensorFlow_LIBRARY_DIRS}")
+    
+    # Get TensorFlow compile and link flags using Python
+    execute_process(
+        COMMAND ${Python_EXECUTABLE} -c "import tensorflow as tf; print(' '.join(tf.sysconfig.get_compile_flags()), end='')"
+        OUTPUT_VARIABLE TF_COMPILE_FLAGS
+        ERROR_QUIET
+        RESULT_VARIABLE TF_COMPILE_RESULT
+    )
+    
+    execute_process(
+        COMMAND ${Python_EXECUTABLE} -c "import tensorflow as tf; print(' '.join(tf.sysconfig.get_link_flags()), end='')"
+        OUTPUT_VARIABLE TF_LINK_FLAGS
+        ERROR_QUIET
+        RESULT_VARIABLE TF_LINK_RESULT
+    )
+    
+    if(TF_COMPILE_RESULT EQUAL 0 AND TF_LINK_RESULT EQUAL 0)
+        message(STATUS "TensorFlow compile flags: ${TF_COMPILE_FLAGS}")
+        message(STATUS "TensorFlow link flags: ${TF_LINK_FLAGS}")
+        
+        # Parse the TensorFlow flags into lists
+        string(REPLACE " " ";" TF_COMPILE_FLAGS_LIST "${TF_COMPILE_FLAGS}")
+        string(REPLACE " " ";" TF_LINK_FLAGS_LIST "${TF_LINK_FLAGS}")
+        
+        # Build TensorFlow custom op using system compiler (following TF guide)
+        add_custom_command(
+            OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/rdktools_tf_ops.so
+            COMMAND g++ -std=c++17 -shared 
+                    ${CMAKE_CURRENT_SOURCE_DIR}/src/cpp/tf_string_op.cpp
+                    -o ${CMAKE_CURRENT_BINARY_DIR}/rdktools_tf_ops.so
+                    -fPIC ${TF_COMPILE_FLAGS_LIST} ${TF_LINK_FLAGS_LIST} -O2
+            DEPENDS src/cpp/tf_string_op.cpp src/cpp/tf_string_op.hpp
+            COMMENT "Building TensorFlow custom op using system compiler"
+            VERBATIM
+        )
+        
+        # Create a custom target to ensure the TensorFlow op is built
+        add_custom_target(tf_ops ALL 
+            DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/rdktools_tf_ops.so
+        )
+        
+        # Install TensorFlow ops library
+        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/rdktools_tf_ops.so 
+                DESTINATION rdktools)
+        
+    else()
+        message(WARNING "Failed to get TensorFlow compilation flags - skipping TensorFlow custom ops")
+    endif()
+    
+else()
+    message(STATUS "TensorFlow not found - skipping TensorFlow custom ops")
+endif()
