@@ -1,18 +1,76 @@
 [project]
 name = "rdtools"
 version = "0.1.0"
-description = "Add your description here"
+description = "High-performance molecular operations using RDKit's C++ core through pybind11 bindings"
 readme = "README.md"
 authors = [
     { name = "wuhao", email = "wuhao@novogaia.bio" }
 ]
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "numpy>=1.20.0",
+]
+optional-dependencies.dev = [
+    "pytest>=6.0",
+    "black",
+    "isort",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: C++",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+keywords = ["chemistry", "cheminformatics", "rdkit", "molecular", "descriptors"]
 
 [tool.scikit-build]
-minimum-version = "build-system.requires"
+minimum-version = "0.10"
 build-dir = "build/{wheel_tag}"
+cmake.version = ">=3.15"
+logging.level = "INFO"
+
+# Install the compiled module into the rdtools package
+wheel.install-dir = ""
+
+# CMake configuration for finding RDKit
+cmake.define.CMAKE_BUILD_TYPE = "Release"
+cmake.define.CMAKE_CXX_STANDARD = "17"
+
+# SDist configuration
+sdist.include = [
+    "src/",
+    "CMakeLists.txt",
+    "README.md",
+    "pyproject.toml",
+]
+sdist.exclude = [
+    "build/",
+    "__pycache__/",
+    "*.pyc",
+    ".git/",
+    ".python-version",
+]
 
 [build-system]
-requires = ["scikit-build-core>=0.10", "pybind11"]
+requires = [
+    "scikit-build-core>=0.10",
+    "pybind11>=2.10.0",
+]
 build-backend = "scikit_build_core.build"
+
+[tool.black]
+line-length = 88
+target-version = ['py312']
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v"
