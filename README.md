@@ -9,6 +9,7 @@ RDTools provides fast molecular descriptor calculations, SMILES validation, and 
 - **Fast Molecular Descriptors**: Calculate molecular weight, LogP, TPSA in parallel
 - **SMILES Validation**: Efficiently validate large arrays of SMILES strings
 - **Fingerprint Generation**: Morgan fingerprints as numpy bit vectors
+- **TensorFlow Integration**: Custom TensorFlow operations for data pipelines (tf.data compatible)
 - **Batch Processing**: Optimized for large datasets with batch processing utilities
 - **NumPy Integration**: Native support for numpy arrays with proper error handling
 
@@ -59,10 +60,12 @@ The build system automatically handles Python dependencies, but here's what gets
 
 **Build-time dependencies** (handled by pyproject.toml):
 - `scikit-build-core>=0.10` - Modern CMake-based Python build backend
-- `pybind11>=2.10.0` - C++/Python binding library
+- `nanobind>=2.0.0` - Fast C++/Python binding library
+- `tensorflow==2.19.0` - For TensorFlow custom operations (built automatically when available)
 
 **Runtime dependencies**:
 - `numpy>=1.20.0` - Core numerical operations
+- `tensorflow==2.19.0` - Required for TensorFlow custom operations
 
 **Development dependencies** (optional):
 - `pytest>=6.0` - Testing framework
@@ -198,6 +201,15 @@ ImportError: cannot import name '_rdtools_core'
 2. Check installation: `find .venv -name "*rdtools*" -type f`
 3. Verify RDKit: `python -c "import rdkit; print(rdkit.__version__)"`
 
+#### TensorFlow Custom Ops Errors
+```
+ImportError: RDK-Tools TensorFlow ops not available: undefined symbol
+```
+**Solutions**:
+1. Ensure TensorFlow versions match between build and runtime environments
+2. Rebuild with correct TensorFlow version: `rm -rf build/ dist/ && uv build`
+3. For distribution, use: `uv run auditwheel repair dist/*.whl --exclude "libtensorflow*"`
+
 ### Build Configuration
 
 The build process is configured via `pyproject.toml`:
@@ -292,6 +304,27 @@ Filter array to keep only valid SMILES.
 #### `rdtools.batch_process(smiles_array, batch_size=1000, **kwargs)`
 Process large arrays in batches with comprehensive results.
 
+### TensorFlow Operations
+
+#### `rdtools.tf_ops.string_process(smiles_tensor)`
+TensorFlow custom operation for string processing in data pipelines.
+
+**Parameters:**
+- `smiles_tensor`: TensorFlow string tensor
+
+**Returns:**
+- TensorFlow string tensor with processed SMILES
+
+**Example:**
+```python
+import tensorflow as tf
+import rdtools.tf_ops
+
+# Use in tf.data pipeline
+dataset = tf.data.Dataset.from_tensor_slices(["CCO", "c1ccccc1"])
+dataset = dataset.map(rdtools.tf_ops.string_process)
+```
+
 ## Performance
 
 RDTools is optimized for high-throughput molecular processing:
@@ -340,6 +373,10 @@ See the `examples/` directory for detailed usage examples:
    # Code formatting
    uv run black src/
    uv run isort src/
+   
+   # Build wheel for distribution
+   uv build
+   uv run auditwheel repair dist/*.whl --exclude "libtensorflow*"
    
    # Run examples
    uv run python examples/basic_usage.py
@@ -425,7 +462,8 @@ rdtools/
 
 ### Build Dependencies
 - **scikit-build-core**: >= 0.10 (modern CMake-based build backend)
-- **pybind11**: >= 2.10.0 (C++/Python binding library)
+- **nanobind**: >= 2.0.0 (fast C++/Python binding library)
+- **tensorflow**: == 2.19.0 (for TensorFlow custom operations)
 - **CMake**: >= 3.15 (build system)
 - **C++ Compiler**: Supporting C++17 standard (GCC 7+, Clang 5+, MSVC 2017+)
 
