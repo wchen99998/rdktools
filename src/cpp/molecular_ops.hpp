@@ -13,7 +13,7 @@
 #include <nanobind/stl/vector.h>
 #include <nanobind/stl/string.h>
 
-namespace rdtools {
+namespace rdktools {
 
 /**
  * @brief Process SMILES strings from list and return molecular weights
@@ -82,4 +82,4 @@ nanobind::ndarray<nanobind::numpy, uint8_t> calculate_morgan_fingerprints(
     int nbits = 2048
 );
 
-} // namespace rdtools
+} // namespace rdktools

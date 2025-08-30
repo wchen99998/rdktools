@@ -8,7 +8,7 @@
 #include <iostream>
 #include <stdexcept>
 
-namespace rdtools {
+namespace rdktools {
 
 namespace nb = nanobind;
 
@@ -204,4 +204,4 @@ nb::ndarray<nb::numpy, uint8_t> calculate_morgan_fingerprints(
     return nb::ndarray<nb::numpy, uint8_t>(data, {size, static_cast<size_t>(nbits)}, owner);
 }
 
-} // namespace rdtools
+} // namespace rdktools

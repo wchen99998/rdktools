@@ -1,5 +1,5 @@
 """
-RDTools: High-performance molecular operations using RDKit's C++ core through pybind11 bindings.
+RDK-Tools: High-performance molecular operations using RDKit's C++ core through nanobind bindings.
 
 This module provides fast molecular descriptor calculations, SMILES validation, and fingerprint
 generation by exposing RDKit's optimized C++ implementation with native numpy array support.
@@ -11,7 +11,7 @@ import numpy as np
 
 # Import the compiled C++ extension
 try:
-    from . import _rdtools_core
+    from . import _rdktools_core
 
     _EXTENSION_AVAILABLE = True
 except ImportError as e:
@@ -23,7 +23,7 @@ def _check_extension():
     """Check if the C++ extension is available."""
     if not _EXTENSION_AVAILABLE:
         raise ImportError(
-            f"RDTools C++ extension not available: {_import_error}. "
+            f"RDK-Tools C++ extension not available: {_import_error}. "
             "Please build the extension first using: uv run python -m pip install -e ."
         )
 
@@ -55,7 +55,7 @@ def molecular_weights(smiles) -> np.ndarray:
     """
     _check_extension()
     smiles = _validate_smiles_input(smiles)
-    return _rdtools_core.calculate_molecular_weights(smiles)
+    return _rdktools_core.calculate_molecular_weights(smiles)
 
 
 def logp(smiles) -> np.ndarray:
@@ -70,7 +70,7 @@ def logp(smiles) -> np.ndarray:
     """
     _check_extension()
     smiles = _validate_smiles_input(smiles)
-    return _rdtools_core.calculate_logp(smiles)
+    return _rdktools_core.calculate_logp(smiles)
 
 
 def tpsa(smiles) -> np.ndarray:
@@ -85,7 +85,7 @@ def tpsa(smiles) -> np.ndarray:
     """
     _check_extension()
     smiles = _validate_smiles_input(smiles)
-    return _rdtools_core.calculate_tpsa(smiles)
+    return _rdktools_core.calculate_tpsa(smiles)
 
 
 # Validation functions
@@ -101,7 +101,7 @@ def is_valid(smiles) -> np.ndarray:
     """
     _check_extension()
     smiles = _validate_smiles_input(smiles)
-    return _rdtools_core.validate_smiles(smiles)
+    return _rdktools_core.validate_smiles(smiles)
 
 
 def canonical_smiles(smiles) -> np.ndarray:
@@ -116,7 +116,7 @@ def canonical_smiles(smiles) -> np.ndarray:
     """
     _check_extension()
     smiles = _validate_smiles_input(smiles)
-    return _rdtools_core.canonicalize_smiles(smiles)
+    return _rdktools_core.canonicalize_smiles(smiles)
 
 
 # Batch processing functions
@@ -133,7 +133,7 @@ def descriptors(smiles) -> Dict[str, np.ndarray]:
     """
     _check_extension()
     smiles = _validate_smiles_input(smiles)
-    return _rdtools_core.calculate_multiple_descriptors(smiles)
+    return _rdktools_core.calculate_multiple_descriptors(smiles)
 
 
 def morgan_fingerprints(smiles, radius: int = 2, nbits: int = 2048) -> np.ndarray:
@@ -151,7 +151,7 @@ def morgan_fingerprints(smiles, radius: int = 2, nbits: int = 2048) -> np.ndarra
     """
     _check_extension()
     smiles = _validate_smiles_input(smiles)
-    return _rdtools_core.calculate_morgan_fingerprints(smiles, radius, nbits)
+    return _rdktools_core.calculate_morgan_fingerprints(smiles, radius, nbits)
 
 
 # Convenience functions

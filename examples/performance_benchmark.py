@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Performance benchmark for rdtools library.
+Performance benchmark for rdktools library.
 
-This script compares the performance of rdtools against pure RDKit Python
+This script compares the performance of rdktools against pure RDKit Python
 for common molecular operations.
 """
 
@@ -12,7 +12,7 @@ from typing import List, Tuple
 
 # Try to import both libraries
 try:
-    import rdtools
+    import rdktools
     RDTOOLS_AVAILABLE = True
 except ImportError:
     RDTOOLS_AVAILABLE = False
@@ -91,16 +91,16 @@ def benchmark_rdkit_python(smiles_array: np.ndarray) -> Tuple[float, dict]:
     
     return end_time - start_time, results
 
-def benchmark_rdtools(smiles_array: np.ndarray) -> Tuple[float, dict]:
-    """Benchmark rdtools implementation."""
+def benchmark_rdktools(smiles_array: np.ndarray) -> Tuple[float, dict]:
+    """Benchmark rdktools implementation."""
     if not RDTOOLS_AVAILABLE:
         return float('inf'), {}
     
     start_time = time.time()
     
     # Use the batch descriptor function for maximum efficiency
-    results = rdtools.descriptors(smiles_array)
-    results['valid'] = rdtools.is_valid(smiles_array)
+    results = rdktools.descriptors(smiles_array)
+    results['valid'] = rdktools.is_valid(smiles_array)
     
     end_time = time.time()
     
@@ -118,8 +118,8 @@ def run_benchmark(n_molecules: int = 1000) -> None:
     # Benchmark RDKit Python
     rdkit_time, rdkit_results = benchmark_rdkit_python(smiles_array)
     
-    # Benchmark rdtools
-    rdtools_time, rdtools_results = benchmark_rdtools(smiles_array)
+    # Benchmark rdktools
+    rdktools_time, rdktools_results = benchmark_rdktools(smiles_array)
     
     # Display results
     print(f"\nTiming Results:")
@@ -129,10 +129,10 @@ def run_benchmark(n_molecules: int = 1000) -> None:
         print("RDKit Python: Not available")
     
     if RDTOOLS_AVAILABLE:
-        print(f"RDTools:      {rdtools_time:.3f} seconds ({n_molecules/rdtools_time:.0f} mol/sec)")
+        print(f"RDTools:      {rdktools_time:.3f} seconds ({n_molecules/rdktools_time:.0f} mol/sec)")
         
         if RDKIT_AVAILABLE and rdkit_time > 0:
-            speedup = rdkit_time / rdtools_time
+            speedup = rdkit_time / rdktools_time
             print(f"Speedup:      {speedup:.1f}x faster")
     else:
         print("RDTools:      Not available")
@@ -143,24 +143,24 @@ def run_benchmark(n_molecules: int = 1000) -> None:
         
         # Check molecular weights (allowing for small numerical differences)
         mw_match = np.allclose(rdkit_results['molecular_weight'], 
-                              rdtools_results['molecular_weight'], 
+                              rdktools_results['molecular_weight'], 
                               equal_nan=True, rtol=1e-6)
         print(f"Molecular weights match: {mw_match}")
         
         # Check LogP
         logp_match = np.allclose(rdkit_results['logp'], 
-                                rdtools_results['logp'], 
+                                rdktools_results['logp'], 
                                 equal_nan=True, rtol=1e-6)
         print(f"LogP values match: {logp_match}")
         
         # Check TPSA
         tpsa_match = np.allclose(rdkit_results['tpsa'], 
-                                rdtools_results['tpsa'], 
+                                rdktools_results['tpsa'], 
                                 equal_nan=True, rtol=1e-6)
         print(f"TPSA values match: {tpsa_match}")
         
         # Check validity
-        valid_match = np.array_equal(rdkit_results['valid'], rdtools_results['valid'])
+        valid_match = np.array_equal(rdkit_results['valid'], rdktools_results['valid'])
         print(f"Validity flags match: {valid_match}")
 
 def benchmark_fingerprints(n_molecules: int = 1000) -> None:
@@ -176,7 +176,7 @@ def benchmark_fingerprints(n_molecules: int = 1000) -> None:
     
     # Benchmark fingerprint calculation
     start_time = time.time()
-    fingerprints = rdtools.morgan_fingerprints(smiles_array, radius=2, nbits=2048)
+    fingerprints = rdktools.morgan_fingerprints(smiles_array, radius=2, nbits=2048)
     end_time = time.time()
     
     fp_time = end_time - start_time

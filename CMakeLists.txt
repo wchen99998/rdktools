@@ -120,14 +120,14 @@ endif()
 message(STATUS "Found RDKit include dir: ${RDKit_INCLUDE_DIRS}")
 message(STATUS "Found RDKit libraries: ${RDKit_LIBRARIES}")
 
-# Create the nanobind module (will be installed into rdtools package)
-nanobind_add_module(_rdtools_core
+# Create the nanobind module (will be installed into rdktools package)
+nanobind_add_module(_rdktools_core
     src/cpp/pybind_module.cpp
     src/cpp/molecular_ops.cpp
 )
 
 # Include directories
-target_include_directories(_rdtools_core PRIVATE 
+target_include_directories(_rdktools_core PRIVATE 
     ${RDKit_INCLUDE_DIRS}
     src/cpp
 )
@@ -135,7 +135,7 @@ target_include_directories(_rdtools_core PRIVATE
 # Link libraries
 if(RDKit_FOUND AND TARGET RDKit::GraphMol)
     # Use modern CMake targets if available
-    target_link_libraries(_rdtools_core PRIVATE 
+    target_link_libraries(_rdktools_core PRIVATE 
         RDKit::GraphMol
         RDKit::SmilesParse
         RDKit::Descriptors
@@ -145,25 +145,25 @@ if(RDKit_FOUND AND TARGET RDKit::GraphMol)
     )
 else()
     # Use found libraries
-    target_link_libraries(_rdtools_core PRIVATE ${RDKit_LIBRARIES})
+    target_link_libraries(_rdktools_core PRIVATE ${RDKit_LIBRARIES})
 endif()
 
 # Compiler-specific options
-target_compile_definitions(_rdtools_core PRIVATE VERSION_INFO=${SKBUILD_PROJECT_VERSION})
+target_compile_definitions(_rdktools_core PRIVATE VERSION_INFO=${SKBUILD_PROJECT_VERSION})
 
 # Set properties
-set_target_properties(_rdtools_core PROPERTIES
+set_target_properties(_rdktools_core PROPERTIES
     CXX_VISIBILITY_PRESET "hidden"
     INTERPROCEDURAL_OPTIMIZATION TRUE
 )
 
 # Platform-specific settings
 if(MSVC)
-    target_compile_options(_rdtools_core PRIVATE /W3)
+    target_compile_options(_rdktools_core PRIVATE /W3)
 else()
-    target_compile_options(_rdtools_core PRIVATE -Wall -Wextra)
+    target_compile_options(_rdktools_core PRIVATE -Wall -Wextra)
 endif()
 
-# Install the extension module into the rdtools package directory so that
-# rdtools/__init__.py can import ._rdtools_core
-install(TARGETS _rdtools_core DESTINATION rdtools)
+# Install the extension module into the rdktools package directory so that
+# rdktools/__init__.py can import ._rdktools_core
+install(TARGETS _rdktools_core DESTINATION rdktools)

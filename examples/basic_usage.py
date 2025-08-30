@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Example script demonstrating rdtools library usage with numpy arrays.
+Example script demonstrating rdktools library usage with numpy arrays.
 
-This script shows how to use rdtools for high-performance molecular operations
+This script shows how to use rdktools for high-performance molecular operations
 on large arrays of SMILES strings using RDKit's C++ core.
 """
 
@@ -11,15 +11,15 @@ import time
 from typing import List
 
 # Note: In a real installation, you would import like this:
-# import rdtools
+# import rdktools
 
 # For this example, we'll handle the import gracefully
 try:
-    import rdtools
+    import rdktools
     RDTOOLS_AVAILABLE = True
 except ImportError:
     RDTOOLS_AVAILABLE = False
-    print("rdtools C++ extension not built yet. Please build it first.")
+    print("rdktools C++ extension not built yet. Please build it first.")
     print("Run: uv run python setup.py build_ext --inplace")
 
 def create_sample_data() -> np.ndarray:
@@ -53,27 +53,27 @@ def demonstrate_basic_functions():
     print(f"Input SMILES: {smiles}")
     
     if not RDTOOLS_AVAILABLE:
-        print("rdtools not available - skipping demonstrations")
+        print("rdktools not available - skipping demonstrations")
         return
     
     # Validate SMILES
-    valid = rdtools.is_valid(smiles)
+    valid = rdktools.is_valid(smiles)
     print(f"Valid SMILES: {valid}")
     
     # Calculate molecular weights
-    mw = rdtools.molecular_weights(smiles)
+    mw = rdktools.molecular_weights(smiles)
     print(f"Molecular weights: {mw}")
     
     # Calculate LogP
-    logp_vals = rdtools.logp(smiles)
+    logp_vals = rdktools.logp(smiles)
     print(f"LogP values: {logp_vals}")
     
     # Calculate TPSA
-    tpsa_vals = rdtools.tpsa(smiles)
+    tpsa_vals = rdktools.tpsa(smiles)
     print(f"TPSA values: {tpsa_vals}")
     
     # Get canonical SMILES
-    canonical = rdtools.canonical_smiles(smiles)
+    canonical = rdktools.canonical_smiles(smiles)
     print(f"Canonical SMILES: {canonical}")
     
     print()
@@ -83,7 +83,7 @@ def demonstrate_batch_processing():
     print("=== Batch Processing Demonstration ===")
     
     if not RDTOOLS_AVAILABLE:
-        print("rdtools not available - skipping demonstrations")
+        print("rdktools not available - skipping demonstrations")
         return
     
     # Create large dataset
@@ -94,7 +94,7 @@ def demonstrate_batch_processing():
     start_time = time.time()
     
     # Method 1: Calculate all descriptors at once (most efficient)
-    results = rdtools.descriptors(large_smiles)
+    results = rdktools.descriptors(large_smiles)
     
     end_time = time.time()
     processing_time = end_time - start_time
@@ -119,7 +119,7 @@ def demonstrate_fingerprints():
     print("=== Morgan Fingerprint Demonstration ===")
     
     if not RDTOOLS_AVAILABLE:
-        print("rdtools not available - skipping demonstrations")
+        print("rdktools not available - skipping demonstrations")
         return
     
     # Sample molecules
@@ -127,7 +127,7 @@ def demonstrate_fingerprints():
     print(f"Calculating fingerprints for: {smiles}")
     
     # Calculate fingerprints
-    fps = rdtools.morgan_fingerprints(smiles, radius=2, nbits=1024)
+    fps = rdktools.morgan_fingerprints(smiles, radius=2, nbits=1024)
     
     print(f"Fingerprint matrix shape: {fps.shape}")
     print(f"Fingerprint data type: {fps.dtype}")
@@ -152,7 +152,7 @@ def demonstrate_advanced_batch():
     print("=== Advanced Batch Processing ===")
     
     if not RDTOOLS_AVAILABLE:
-        print("rdtools not available - skipping demonstrations")
+        print("rdktools not available - skipping demonstrations")
         return
     
     # Create test data with some invalid SMILES
@@ -164,11 +164,11 @@ def demonstrate_advanced_batch():
     print(f"Input: {test_smiles}")
     
     # Filter to valid SMILES only
-    valid_smiles = rdtools.filter_valid(test_smiles)
+    valid_smiles = rdktools.filter_valid(test_smiles)
     print(f"Valid SMILES: {valid_smiles}")
     
     # Use the comprehensive batch processing function
-    batch_results = rdtools.batch_process(
+    batch_results = rdktools.batch_process(
         test_smiles,
         batch_size=4,  # Small batch for demonstration
         include_descriptors=True,
@@ -193,7 +193,7 @@ def compare_performance():
     print("=== Performance Comparison ===")
     
     if not RDTOOLS_AVAILABLE:
-        print("rdtools not available - skipping demonstrations")
+        print("rdktools not available - skipping demonstrations")
         return
     
     # Create moderately sized dataset
@@ -203,14 +203,14 @@ def compare_performance():
     
     # Method 1: Individual function calls
     start = time.time()
-    mw1 = rdtools.molecular_weights(smiles)
-    logp1 = rdtools.logp(smiles)
-    tpsa1 = rdtools.tpsa(smiles)
+    mw1 = rdktools.molecular_weights(smiles)
+    logp1 = rdktools.logp(smiles)
+    tpsa1 = rdktools.tpsa(smiles)
     time1 = time.time() - start
     
     # Method 2: Batch descriptors function
     start = time.time()
-    results2 = rdtools.descriptors(smiles)
+    results2 = rdktools.descriptors(smiles)
     time2 = time.time() - start
     
     print(f"Individual calls: {time1:.4f} seconds")
