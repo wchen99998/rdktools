@@ -62,7 +62,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
-BUILD_OUT_DIR="$ROOT_DIR/build/rdkit"
+BUILD_OUT_DIR="$ROOT_DIR/build"
 mkdir -p "$BUILD_OUT_DIR"
 
 echo "Building Docker image: $IMAGE_TAG"
@@ -88,6 +88,6 @@ mkdir -p "$BUILD_OUT_DIR"
 
 # Use docker create + cp to extract from the builder stage through exporter image
 CID=$(docker create "$IMAGE_TAG")
-trap 'docker rm -f "$CID" >/dev/null 2>&1 || true' EXIT
-docker cp "$CID":/rdkit_build/. "$BUILD_OUT_DIR"
+# trap 'docker rm -f "$CID" >/dev/null 2>&1 || true' EXIT
+docker cp "$CID":/rdkit_bundle/. "$BUILD_OUT_DIR"
 echo "Artifacts copied to $BUILD_OUT_DIR"

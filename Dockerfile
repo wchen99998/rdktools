@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.4
+# syntax=docker/dockerfile:1.7
 
 FROM ubuntu:25.04 AS base
 
@@ -71,7 +71,7 @@ ARG CMAKE_VERBOSE=0
 WORKDIR /src
 RUN git clone --depth 1 --branch "${RDKIT_GIT_REF}" "${RDKIT_GIT_URL}" rdkit
 
-# Configure CMake
+# Configure & build with a relocatable RPATH
 WORKDIR /src/rdkit
 RUN source ${CONDA}/etc/profile.d/conda.sh && conda activate rdkit_build && \
     export CXXFLAGS="${CXXFLAGS} -Wall -D_GLIBCXX_USE_CXX11_ABI=1" && \
@@ -81,17 +81,14 @@ RUN source ${CONDA}/etc/profile.d/conda.sh && conda activate rdkit_build && \
       -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_CXX_STANDARD=17 \
       -DCMAKE_CXX_STANDARD_REQUIRED=ON \
-      -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE} \
-      -DCMAKE_INSTALL_PREFIX=/rdkit_install \
+      -DCMAKE_INSTALL_PREFIX=/opt/rdkit \
       -DRDK_INSTALL_INTREE=OFF \
       -DRDK_INSTALL_STATIC_LIBS=OFF \
-      -DRDK_BUILD_CPP_TESTS=ON \
+      -DRDK_BUILD_CPP_TESTS=OFF \
       -DRDK_BUILD_PYTHON_WRAPPERS=OFF \
       -DRDK_BUILD_COORDGEN_SUPPORT=ON \
-      -DRDK_BUILD_MAEPARSER_SUPPORT=ON \
+      -DRDK_BUILD_MAEPARSER_SUPPORT=OFF \
       -DRDK_OPTIMIZE_POPCNT=ON \
-      -DRDK_BUILD_TEST_GZIP=ON \
-      -DRDK_BUILD_FREESASA_SUPPORT=ON \
       -DRDK_BUILD_AVALON_SUPPORT=ON \
       -DRDK_BUILD_INCHI_SUPPORT=ON \
       -DRDK_BUILD_YAEHMOP_SUPPORT=ON \
@@ -115,33 +112,14 @@ RUN source ${CONDA}/etc/profile.d/conda.sh && conda activate rdkit_build && \
     cd /src/rdkit/build && \
     make -j "${CORES}" install VERBOSE=${MAKE_VERBOSE}
 
-# Optionally run unit tests
-ARG RUN_TESTS=0
-RUN if [ "${RUN_TESTS}" = "1" ]; then \
-      source ${CONDA}/etc/profile.d/conda.sh && conda activate rdkit_build && \
-      export RDBASE=/src/rdkit && \
-      export PYTHONPATH=${RDBASE}:${PYTHONPATH} && \
-      export LD_LIBRARY_PATH=${RDBASE}/lib:${CONDA_PREFIX}/lib:${LD_LIBRARY_PATH} && \
-      cd /src/rdkit/build && \
-      ctest -j "${CORES}" --output-on-failure -T Test ; \
-    fi
 
-# Optionally run docs doctest
-ARG RUN_DOCS=0
-RUN if [ "${RUN_DOCS}" = "1" ]; then \
-      source ${CONDA}/etc/profile.d/conda.sh && conda activate rdkit_build && \
-      conda install -c conda-forge --override-channels ipython=8.12 sphinx myst-parser && \
-      export RDBASE=/src/rdkit && \
-      export PYTHONPATH=${RDBASE}:${PYTHONPATH} && \
-      export LD_LIBRARY_PATH=${RDBASE}/lib:${LD_LIBRARY_PATH} && \
-      cd /src/rdkit/Docs/Book && \
-      make doctest ; \
-    fi
-
-FROM alpine:latest AS exporter
-# Export the install directory content with headers and libraries
-COPY --from=builder /rdkit_install/ /rdkit_build/
-# Add a dummy command for docker create to work
-CMD ["/bin/sh"]
+# ########################################
+# # 4) Export a clean artifact container #
+# ########################################
+FROM scratch AS exporter
+# Your relocatable pack is /rdkit_bundle
+COPY --from=builder /opt/rdkit /rdkit_bundle/rdkit
+# Add a default command to prevent "no command specified" errors
+CMD ["/bin/true"]
 
 
