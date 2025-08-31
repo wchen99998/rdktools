@@ -242,8 +242,17 @@ except ImportError:
     _TF_OPS_AVAILABLE = False
 
 
-# Version and metadata
-__version__ = "0.1.0"
+# Version and metadata: prefer package metadata (pyproject.toml),
+# fall back to the compiled extension's embedded version if needed.
+try:
+    from importlib.metadata import PackageNotFoundError, version as _pkg_version
+
+    __version__ = _pkg_version("rdkit-data-pipeline-tools")
+except Exception:
+    try:
+        __version__ = _rdktools_core.__version__ if _EXTENSION_AVAILABLE else "0.0.0"
+    except Exception:
+        __version__ = "0.0.0"
 __all__ = [
     "molecular_weights",
     "logp",

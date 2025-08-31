@@ -3,6 +3,14 @@
 #include <nanobind/stl/vector.h>
 #include <nanobind/stl/string.h>
 #include "molecular_ops.hpp"
+ 
+// Helper macros to stringify VERSION_INFO passed from CMake
+#ifndef STRINGIFY
+#  define STRINGIFY(x) #x
+#endif
+#ifndef MACRO_STRINGIFY
+#  define MACRO_STRINGIFY(x) STRINGIFY(x)
+#endif
 
 namespace nb = nanobind;
 using namespace nb::literals;
@@ -48,5 +56,5 @@ NB_MODULE(_rdktools_core, m) {
           "nbits"_a = 2048);
     
     // Module version
-    m.attr("__version__") = "0.1.0";
+    m.attr("__version__") = MACRO_STRINGIFY(VERSION_INFO);
 }
