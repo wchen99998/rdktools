@@ -15,12 +15,7 @@ RDKTools provides fast molecular descriptor calculations, SMILES validation, and
 
 ## Installation
 
-### System Requirements
-
-- **Operating System**: Linux (Ubuntu/Debian recommended), macOS, or Windows
-- **Python**: 3.12 or later (specified in pyproject.toml)
-- **Memory**: At least 4GB RAM recommended for building
-- **Disk Space**: ~500MB for dependencies and build artifacts
+There's no wheel built yet.
 
 ### Dependencies
 
