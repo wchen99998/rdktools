@@ -10,7 +10,7 @@ This document provides a comprehensive analysis of the RDKit build artifacts gen
 - **Boost Version**: 1.84.0
 - **Build Type**: Release
 - **Total Build Output Size**: ~51MB of shared libraries (~73MB static libraries)
-- **Build Date**: August 31, 2024
+- **Build Date**: August 31, 2025
 
 ## Build Artifacts Summary
 
