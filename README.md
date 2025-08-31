@@ -2,7 +2,7 @@
 
 High-performance molecular operations using RDKit C++ with numpy arrays.
 
-RDTools provides fast molecular descriptor calculations, SMILES validation, and fingerprint generation by exposing RDKit's C++ core through pybind11 bindings. This allows for efficient processing of large numpy arrays of SMILES strings.
+RDTools provides fast molecular descriptor calculations, SMILES validation, and fingerprint generation by exposing RDKit's C++ core through nanobind bindings. This allows for efficient processing of large numpy arrays of SMILES strings.
 
 ## Features
 
