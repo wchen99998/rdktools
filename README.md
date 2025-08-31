@@ -74,184 +74,21 @@ The build system automatically handles Python dependencies, but here's what gets
 
 ### Build and Installation
 
-#### Method 1: Quick Install (Recommended)
-
-```bash
-# 1. Clone the repository
-git clone <repository-url>
-cd rdtools
-
-# 2. Install using uv (handles everything automatically)
-uv sync
-
-# 3. Build the C++ extension (with verbose output for debugging)
-SKBUILD_EDITABLE_VERBOSE=1 uv sync --reinstall
-```
-
-#### Method 2: Step-by-Step Installation
-
 ```bash
 # 1. Clone and navigate
 git clone <repository-url>
 cd rdtools
 
-# 2. Create and activate virtual environment (if not using uv)
-python -m venv .venv
-source .venv/bin/activate  # Linux/macOS
-# or
-.venv\Scripts\activate     # Windows
+# Build Rdkit
+./scripts/build_rdkit.sh
 
-# 3. Install build dependencies
-pip install scikit-build-core pybind11 numpy
+# Set up build env for linking
+conda create -n rdtools -p 3.12
+conda install boost-cpp=1.84 boost=1.84 eigen cairo
 
 # 4. Build and install in editable mode
-pip install -e .
+RDKIT_ROOT=./rdtools/build/rdkit/rdkit pip install -e .
 ```
-
-#### Method 3: Manual CMake Build (Advanced)
-
-For development or debugging the build process:
-
-```bash
-# 1. Ensure RDKit is installed (see System Dependencies above)
-
-# 2. Create build directory
-mkdir build && cd build
-
-# 3. Configure with CMake
-cmake .. \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_CXX_STANDARD=17 \
-    -DPYTHON_EXECUTABLE=$(which python)
-
-# 4. Build with verbose output
-make VERBOSE=1 -j$(nproc)  # Linux/macOS
-# or
-cmake --build . --config Release --verbose  # Windows
-
-# 5. The extension will be in: build/_rdtools_core.so (or .pyd on Windows)
-```
-
-### Verification
-
-After installation, verify everything works:
-
-```bash
-# Test basic import
-uv run python -c "import rdtools; print('RDTools version:', rdtools.__version__)"
-
-# Test C++ extension loading
-uv run python -c "import rdtools; print('Extension available:', rdtools._EXTENSION_AVAILABLE)"
-
-# Run basic functionality test
-uv run python -c "
-import rdtools
-import numpy as np
-smiles = np.array(['CCO', 'c1ccccc1'])
-result = rdtools.molecular_weights(smiles)
-print('Molecular weights:', result)
-print('✓ Installation successful!')
-"
-
-# Run the comprehensive example
-uv run python examples/basic_usage.py
-```
-
-### Troubleshooting
-
-#### RDKit Not Found
-```
-Error: "RDKit not found. Please install RDKit or set RDBASE environment variable."
-```
-**Solution**: Install RDKit system packages as shown in System Dependencies above.
-
-#### CMake Version Too Old
-```
-Error: "CMake 3.15 or higher is required"
-```
-**Solution**: 
-```bash
-# Ubuntu/Debian
-sudo apt-get install cmake
-# Verify version
-cmake --version
-```
-
-#### Compilation Errors
-```
-Error: Cannot find RDKit headers
-```
-**Solutions**:
-1. Install development packages: `sudo apt-get install librdkit-dev`
-2. Set environment variable: `export RDBASE=/path/to/rdkit`
-3. For conda installations: `export RDBASE=$CONDA_PREFIX`
-
-#### Python Version Issues
-```
-Error: "requires-python = '>=3.12'"
-```
-**Solution**: Use Python 3.12 or later. Check with: `python --version`
-
-#### Import Errors After Build
-```
-ImportError: cannot import name '_rdtools_core'
-```
-**Solutions**:
-1. Rebuild: `SKBUILD_EDITABLE_VERBOSE=1 uv sync --reinstall`
-2. Check installation: `find .venv -name "*rdtools*" -type f`
-3. Verify RDKit: `python -c "import rdkit; print(rdkit.__version__)"`
-
-#### TensorFlow Custom Ops Errors
-```
-ImportError: RDK-Tools TensorFlow ops not available: undefined symbol
-```
-**Solutions**:
-1. Ensure TensorFlow versions match between build and runtime environments
-2. Rebuild with correct TensorFlow version: `rm -rf build/ dist/ && uv build`
-3. For distribution, use: `uv run auditwheel repair dist/*.whl --exclude "libtensorflow*"`
-
-### Build Configuration
-
-The build process is configured via `pyproject.toml`:
-
-```toml
-[tool.scikit-build]
-build-dir = "build/{wheel_tag}"        # Separate builds for different Python versions
-cmake.version = ">=3.15"               # Minimum CMake version
-cmake.define.CMAKE_BUILD_TYPE = "Release"  # Optimized builds
-cmake.define.CMAKE_CXX_STANDARD = "17"     # C++17 for RDKit compatibility
-```
-
-Key files:
-- `pyproject.toml` - Python packaging and build configuration
-- `CMakeLists.txt` - CMake build instructions for C++ extension
-- `src/cpp/` - C++ source code using RDKit and pybind11
-- `src/rdtools/__init__.py` - Python API wrapper
-
-## Quick Start
-
-```python
-import numpy as np
-import rdtools
-
-# Sample SMILES strings
-smiles = np.array(['CCO', 'c1ccccc1', 'CC(=O)O', 'invalid_smiles'])
-
-# Validate SMILES
-valid = rdtools.is_valid(smiles)
-print(f"Valid: {valid}")  # [True, True, True, False]
-
-# Calculate molecular descriptors
-descriptors = rdtools.descriptors(smiles)
-print(f"Molecular weights: {descriptors['molecular_weight']}")
-print(f"LogP values: {descriptors['logp']}")
-print(f"TPSA values: {descriptors['tpsa']}")
-
-# Generate fingerprints
-fingerprints = rdtools.morgan_fingerprints(smiles, radius=2, nbits=2048)
-print(f"Fingerprint shape: {fingerprints.shape}")  # (4, 2048)
-```
-
 ## API Reference
 
 ### Core Functions
@@ -342,111 +179,6 @@ On a modern CPU, RDTools can process:
 
 Performance varies by molecule complexity and system specifications.
 
-## Examples
-
-See the `examples/` directory for detailed usage examples:
-
-- `basic_usage.py`: Comprehensive demonstration of all features
-- `performance_comparison.py`: Benchmarking against pure Python approaches
-
-## Development
-
-### Development Setup
-
-1. **Clone and install in development mode**:
-   ```bash
-   git clone <repository-url>
-   cd rdtools
-   
-   # Install with development dependencies
-   uv sync
-   
-   # Build the C++ extension
-   SKBUILD_EDITABLE_VERBOSE=1 uv sync --reinstall
-   ```
-
-2. **Development workflow**:
-   ```bash
-   # Run tests
-   uv run pytest tests/
-   
-   # Code formatting
-   uv run black src/
-   uv run isort src/
-   
-   # Build wheel for distribution
-   uv build
-   uv run auditwheel repair dist/*.whl --exclude "libtensorflow*"
-   
-   # Run examples
-   uv run python examples/basic_usage.py
-   ```
-
-3. **Rebuilding after C++ changes**:
-   ```bash
-   # Clean rebuild (if needed)
-   rm -rf build/
-   SKBUILD_EDITABLE_VERBOSE=1 uv sync --reinstall
-   
-   # Or force rebuild with pip
-   uv run python -m pip install -e . --force-reinstall --no-deps
-   ```
-
-### Testing
-
-Run the test suite to ensure everything works:
-
-```bash
-# Run all tests
-uv run pytest tests/ -v
-
-# Run specific test
-uv run pytest tests/test_rdtools.py::TestBasicFunctions::test_molecular_weights -v
-
-# Test with coverage
-uv run pytest tests/ --cov=rdtools --cov-report=html
-```
-
-### Build Debugging
-
-If you encounter build issues:
-
-```bash
-# Build with maximum verbosity
-SKBUILD_EDITABLE_VERBOSE=1 CMAKE_VERBOSE_MAKEFILE=ON uv sync --reinstall
-
-# Check CMake configuration
-cd build/cp312-cp312-linux_x86_64  # (or your platform directory)
-cmake .. -DCMAKE_BUILD_TYPE=Debug
-
-# Manual build for debugging
-mkdir debug_build && cd debug_build
-cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_VERBOSE_MAKEFILE=ON
-make VERBOSE=1
-```
-
-### Project Structure
-
-```
-rdtools/
-├── src/
-│   ├── rdtools/           # Python package
-│   │   └── __init__.py    # Main API and function wrappers
-│   └── cpp/               # C++ source code
-│       ├── molecular_ops.hpp    # C++ function declarations
-│       ├── molecular_ops.cpp    # C++ implementations using RDKit
-│       └── pybind_module.cpp    # pybind11 bindings
-├── examples/              # Usage examples and demos
-│   └── basic_usage.py     # Comprehensive feature demonstration
-├── tests/                 # Test suite
-│   └── test_rdtools.py    # Unit tests
-├── build/                 # Build artifacts (generated)
-├── CMakeLists.txt         # CMake build configuration
-├── pyproject.toml         # Project metadata and build config
-├── uv.lock               # Dependency lock file
-└── CLAUDE.md             # Development guidelines
-```
-
 ## Dependencies
 
 ### Runtime Dependencies
@@ -455,10 +187,8 @@ rdtools/
 
 ### System Dependencies
 - **RDKit**: >= 2022.9.1 (C++ libraries and headers required)
-  - `librdkit-dev` - Development headers
-  - `librdkit1` - Runtime libraries  
-  - `rdkit-data` - Data files
-  - `python3-rdkit` - Python bindings (optional, for compatibility testing)
+- **Boost**: ==1.84.0 
+
 
 ### Build Dependencies
 - **scikit-build-core**: >= 0.10 (modern CMake-based build backend)
@@ -467,21 +197,7 @@ rdtools/
 - **CMake**: >= 3.15 (build system)
 - **C++ Compiler**: Supporting C++17 standard (GCC 7+, Clang 5+, MSVC 2017+)
 
-### Development Dependencies (Optional)
-- **pytest**: >= 6.0 (testing framework)
-- **black** (code formatting)
-- **isort** (import sorting)
-- **uv** (recommended package manager)
-
 ## License
 
-[Add your license here]
+MIT
 
-## Contributing
-
-[Add contributing guidelines here]
-
-## Citation
-
-If you use RDTools in your research, please cite:
-[Add citation information here]
