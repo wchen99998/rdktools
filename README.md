@@ -9,6 +9,7 @@ RDKTools provides fast molecular descriptor calculations, SMILES validation, and
 - **Fast Molecular Descriptors**: Calculate molecular weight, LogP, TPSA in parallel
 - **SMILES Validation**: Efficiently validate large arrays of SMILES strings
 - **Fingerprint Generation**: Morgan fingerprints as numpy bit vectors
+- **Fingerprint Reasoning**: Generate human-readable ECFP traces explaining fingerprint environments
 - **TensorFlow Integration**: Custom TensorFlow operations for data pipelines (tf.data compatible)
 - **Batch Processing**: Optimized for large datasets with batch processing utilities
 - **NumPy Integration**: Native support for numpy arrays with proper error handling
@@ -165,6 +166,29 @@ Calculate Morgan fingerprints as bit vectors.
 **Returns:**
 - 2D numpy array of shape (n_molecules, nbits) with dtype uint8
 
+#### `rdtools.ecfp_reasoning_trace(smiles, radius=2, *, isomeric=True, kekulize=False, include_per_center=True)`
+Generate a human-readable explanation of the environments that contribute to the ECFP (Morgan) fingerprint for a single SMILES string.
+
+**Returns:**
+- Multi-line string with aggregated tokens by radius followed by optional per-atom environment chains.
+
+**Example:**
+```python
+import rdtools
+
+trace = rdtools.ecfp_reasoning_trace("CCO")
+print(trace)
+# r0: r0:[#6]×2, r0:[#8]×1
+# r1: r1:[#6]-[#6]×2
+#
+# per-center chains
+# C0: r0:[#6] → r1:[#6]-[#6]
+# C1: r0:[#6] → r1:[#6]-[#6]
+# O2: r0:[#8]
+```
+
+Invalid SMILES return an empty string, allowing the caller to decide how to surface errors.
+
 ### Utility Functions
 
 #### `rdtools.filter_valid(smiles_array)`
@@ -182,7 +206,7 @@ TensorFlow custom operation for string processing in data pipelines.
 - `smiles_tensor`: TensorFlow string tensor
 
 **Returns:**
-- TensorFlow string tensor with processed SMILES
+- TensorFlow string tensor where each element contains the ECFP reasoning trace. Invalid inputs yield the literal `[invalid]`.
 
 **Example:**
 ```python
@@ -192,6 +216,10 @@ import rdtools.tf_ops
 # Use in tf.data pipeline
 dataset = tf.data.Dataset.from_tensor_slices(["CCO", "c1ccccc1"])
 dataset = dataset.map(rdtools.tf_ops.string_process)
+
+for trace in dataset.take(1):
+    print(trace.numpy().decode())
+    # r0: ...
 ```
 
 ## Performance

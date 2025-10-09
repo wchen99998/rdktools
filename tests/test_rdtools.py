@@ -206,6 +206,23 @@ class TestFingerprints:
         assert 0.0 < tanimoto < 1.0
 
 
+class TestReasoningTrace:
+    """Test ECFP reasoning trace generation."""
+
+    def test_ecfp_reasoning_trace_basic(self):
+        """Trace contains aggregate and per-center sections."""
+        trace = rdktools.ecfp_reasoning_trace("CCO")
+
+        assert isinstance(trace, str)
+        assert "r0:" in trace
+        assert "# per-center chains" in trace
+        assert "C0:" in trace
+
+    def test_ecfp_reasoning_trace_invalid_smiles(self):
+        """Invalid SMILES should result in empty trace."""
+        assert rdktools.ecfp_reasoning_trace("not_a_smiles") == ""
+
+
 class TestInputValidation:
     """Test input validation and error handling."""
     

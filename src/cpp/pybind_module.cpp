@@ -55,6 +55,15 @@ NB_MODULE(_rdktools_core, m) {
           "radius"_a = 2,
           "nbits"_a = 2048);
     
+    // ECFP reasoning trace
+    m.def("ecfp_reasoning_trace", &rdktools::ecfp_reasoning_trace,
+          "Generate an ECFP reasoning trace for a SMILES string",
+          "smiles"_a,
+          "radius"_a = 2,
+          "isomeric"_a = true,
+          "kekulize"_a = false,
+          "include_per_center"_a = true);
+    
     // Module version
     m.attr("__version__") = MACRO_STRINGIFY(VERSION_INFO);
 }

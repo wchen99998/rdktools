@@ -15,13 +15,17 @@ if not tf_ops.is_tf_ops_available():
     )
 
 
-def test_string_process_passthrough():
+def test_string_process_generates_trace():
     inputs = tf.constant(["CCO", "c1ccccc1", "CC(=O)O"])
 
     outputs = tf_ops.string_process(inputs)
 
     assert outputs.shape == inputs.shape
-    assert tf.reduce_all(tf.equal(inputs, outputs)).numpy()
+    decoded = outputs.numpy()
+    for value in decoded:
+        text = value.decode()
+        assert "r0:" in text
+        assert "# per-center chains" in text
 
 
 def test_create_tf_dataset_batches():
@@ -32,4 +36,7 @@ def test_create_tf_dataset_batches():
     assert len(batches) == 2
 
     flattened = tf.concat(batches, axis=0).numpy()
-    assert list(flattened) == [s.encode() for s in smiles]
+    assert len(flattened) == len(smiles)
+    for value in flattened:
+        text = value.decode()
+        assert text.startswith("r0:")

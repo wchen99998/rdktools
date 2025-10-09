@@ -1,11 +1,19 @@
 #include "molecular_ops.hpp"
-#include <GraphMol/SmilesParse/SmilesParse.h>
-#include <GraphMol/SmilesParse/SmilesWrite.h>
+#include "ecfp_trace.hpp"
 #include <GraphMol/Descriptors/MolDescriptors.h>
 #include <GraphMol/Fingerprints/MorganFingerprints.h>
 #include <GraphMol/FileParsers/MolSupplier.h>
+#include <GraphMol/MolOps.h>
+#include <GraphMol/SmilesParse/SmilesParse.h>
+#include <GraphMol/SmilesParse/SmilesWrite.h>
 #include <RDGeneral/RDLog.h>
+#include <algorithm>
 #include <iostream>
+#include <limits>
+#include <map>
+#include <memory>
+#include <set>
+#include <sstream>
 #include <stdexcept>
 
 namespace rdktools {
@@ -202,6 +210,17 @@ nb::ndarray<nb::numpy, uint8_t> calculate_morgan_fingerprints(
     
     // Create 2D nanobind ndarray
     return nb::ndarray<nb::numpy, uint8_t>(data, {size, static_cast<size_t>(nbits)}, owner);
+}
+
+std::string ecfp_reasoning_trace(const std::string& smiles,
+                                 int radius,
+                                 bool isomeric,
+                                 bool kekulize,
+                                 bool include_per_center) {
+    const unsigned int fp_radius =
+        radius < 0 ? 0U : static_cast<unsigned int>(radius);
+    return ecfp_reasoning_trace_from_smiles(
+        smiles, fp_radius, isomeric, kekulize, include_per_center);
 }
 
 } // namespace rdktools

@@ -82,4 +82,21 @@ nanobind::ndarray<nanobind::numpy, uint8_t> calculate_morgan_fingerprints(
     int nbits = 2048
 );
 
+/**
+ * @brief Generate an ECFP-style reasoning trace for a SMILES string.
+ * @param smiles SMILES string to analyse
+ * @param radius Morgan fingerprint radius (default: 2)
+ * @param isomeric Whether to include stereochemistry when generating SMARTS
+ * @param kekulize Whether to kekulize the molecule before generating fragments
+ * @param include_per_center Whether to include per-atom chains in the trace
+ * @return Multi-line reasoning trace text. Invalid SMILES yield an empty string.
+ */
+std::string ecfp_reasoning_trace(
+    const std::string& smiles,
+    int radius = 2,
+    bool isomeric = true,
+    bool kekulize = false,
+    bool include_per_center = true
+);
+
 } // namespace rdktools

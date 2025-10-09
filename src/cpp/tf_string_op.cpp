@@ -1,4 +1,5 @@
 #include "tf_string_op.hpp"
+#include "ecfp_trace.hpp"
 #include "tensorflow/core/framework/op.h"
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/framework/shape_inference.h"
@@ -6,6 +7,8 @@
 #include "tensorflow/core/framework/tensor_shape.h"
 #include "tensorflow/core/lib/core/status.h"
 #include "tensorflow/core/platform/logging.h"
+#include <exception>
+#include <string>
 
 namespace tensorflow {
 
@@ -19,14 +22,14 @@ REGISTER_OP("StringProcess")
       return ::tensorflow::OkStatus();
     })
     .Doc(R"doc(
-Process string tensors through a custom C++ operation for TensorFlow data pipelines.
+Generate ECFP (Morgan fingerprint) reasoning traces for SMILES tensors.
 
-This operation takes string tensors as input and returns string tensors as output.
-Currently implemented as a pass-through operation that returns the input unchanged,
-but can be extended to perform custom string processing operations.
+Each input SMILES string is converted into a multi-line explanation describing
+which fragment environments contribute to the fingerprint, including a per-atom
+chain summary. Invalid SMILES yield the literal string "[invalid]".
 
-input_strings: A tensor of strings to process.
-output_strings: A tensor of processed strings with the same shape as input.
+input_strings: A tensor of SMILES strings to analyse.
+output_strings: A tensor of reasoning traces with the same shape as input.
 )doc");
 
 // Kernel implementation
@@ -51,13 +54,26 @@ void StringProcessOp::Compute(OpKernelContext* context) {
   auto input_flat = input_tensor.flat<tstring>();
   auto output_flat = output_tensor->flat<tstring>();
 
-  // Process strings (currently just pass-through)
-  // This is where you would implement your custom string processing logic
-  const int64_t num_elements = input_flat.size();
-  for (int64_t i = 0; i < num_elements; ++i) {
-    // For now, just copy the input to output
-    // TODO: Replace with actual string processing logic
-    output_flat(i) = input_flat(i);
+    const int64_t num_elements = input_flat.size();
+    for (int64_t i = 0; i < num_elements; ++i) {
+        const std::string smiles = input_flat(i);
+        std::string trace;
+        try {
+      trace = rdktools::ecfp_reasoning_trace_from_smiles(
+          smiles, 2U, true, false, true);
+    } catch (const std::exception& e) {
+      trace = std::string("[error] ") + e.what();
+    }
+
+    if (trace.empty()) {
+      if (smiles.empty()) {
+        output_flat(i) = "";
+      } else {
+        output_flat(i) = "[invalid]";
+      }
+    } else {
+      output_flat(i) = std::move(trace);
+    }
   }
 }
 

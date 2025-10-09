@@ -5,77 +5,7 @@ project(${SKBUILD_PROJECT_NAME} VERSION ${SKBUILD_PROJECT_VERSION} LANGUAGES CXX
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Find required packages
-if(NOT DEFINED Python_FIND_VIRTUALENV)
-    if(EXISTS "${CMAKE_SOURCE_DIR}/.venv")
-        set(Python_FIND_VIRTUALENV ONLY CACHE STRING "Prefer the active Python virtual environment" FORCE)
-    else()
-        set(Python_FIND_VIRTUALENV FIRST CACHE STRING "Search system Python first (no project .venv detected)" FORCE)
-    endif()
-endif()
-
-if(EXISTS "${CMAKE_SOURCE_DIR}/.venv")
-    set(Python_ROOT_DIR "${CMAKE_SOURCE_DIR}/.venv" CACHE PATH "Python virtual environment root" FORCE)
-endif()
-
-if(NOT Python_EXECUTABLE)
-    foreach(_py_var PYTHON_EXECUTABLE PYTHON PYBIN CIBUILDWHEEL_PYTHON CIBW_PYTHON)
-        if(NOT Python_EXECUTABLE AND DEFINED ENV{${_py_var}})
-            set(_python_candidate "$ENV{${_py_var}}")
-            if(EXISTS "${_python_candidate}")
-                set(Python_EXECUTABLE "${_python_candidate}" CACHE FILEPATH "Python interpreter used for the build" FORCE)
-            endif()
-        endif()
-    endforeach()
-endif()
-
-if(NOT Python_EXECUTABLE)
-    if(DEFINED ENV{PYTHON_EXECUTABLE})
-        set(Python_EXECUTABLE "$ENV{PYTHON_EXECUTABLE}" CACHE FILEPATH "Python interpreter used for the build" FORCE)
-    else()
-        execute_process(
-            COMMAND "${CMAKE_COMMAND}" -E env python3 -c "import sys; print(sys.executable)"
-            OUTPUT_VARIABLE _python_from_cmake
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-            ERROR_QUIET
-        )
-        if(_python_from_cmake)
-            set(Python_EXECUTABLE "${_python_from_cmake}" CACHE FILEPATH "Python interpreter used for the build" FORCE)
-        endif()
-    endif()
-else()
-    set(Python_EXECUTABLE "${Python_EXECUTABLE}" CACHE FILEPATH "Python interpreter used for the build" FORCE)
-endif()
-
-if(Python_EXECUTABLE AND NOT DEFINED Python_ROOT_DIR)
-    get_filename_component(_python_bindir "${Python_EXECUTABLE}" DIRECTORY)
-    get_filename_component(_python_prefix "${_python_bindir}/.." REALPATH)
-    if(EXISTS "${_python_prefix}/include")
-        set(Python_ROOT_DIR "${_python_prefix}" CACHE PATH "Python installation prefix detected from interpreter" FORCE)
-    endif()
-endif()
-
-set(Python_FIND_STRATEGY LOCATION CACHE STRING "Search locations first so the specified interpreter is honored" FORCE)
-set(Python_FIND_FRAMEWORK LAST CACHE STRING "Avoid picking macOS frameworks unless necessary" FORCE)
-set(Python_FIND_IMPLEMENTATIONS "CPython" CACHE STRING "Prefer CPython implementation" FORCE)
-
-find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
-
-if(NOT nanobind_DIR)
-    set(_nanobind_hints "")
-    if(DEFINED Python_SITEARCH)
-        list(APPEND _nanobind_hints "${Python_SITEARCH}/nanobind/cmake")
-    endif()
-    if(DEFINED Python_SITELIB)
-        list(APPEND _nanobind_hints "${Python_SITELIB}/nanobind/cmake")
-    endif()
-    foreach(hint IN LISTS _nanobind_hints)
-        if(EXISTS "${hint}/nanobindConfig.cmake" OR EXISTS "${hint}/nanobind-config.cmake")
-            list(APPEND CMAKE_PREFIX_PATH "${hint}")
-        endif()
-    endforeach()
-endif()
-
+find_package(Python 3.12 COMPONENTS Interpreter Development.Module REQUIRED)
 find_package(nanobind CONFIG REQUIRED)
 
 set(RDKTOOLS_RDKIT_GIT_TAG "Release_2025_09_1" CACHE STRING "Git tag or commit to use when vendoring RDKit")
@@ -311,6 +241,7 @@ add_subdirectory(${rdkit_external_SOURCE_DIR} ${rdkit_external_BINARY_DIR})
 nanobind_add_module(_rdktools_core
     src/cpp/pybind_module.cpp
     src/cpp/molecular_ops.cpp
+    src/cpp/ecfp_trace.cpp
 )
 
 # Include directories (RDKit headers provided via imported targets' usage requirements)
@@ -378,23 +309,37 @@ message(STATUS "Found TensorFlow lib dir: ${TensorFlow_LIBRARY_DIRS}")
 
 # Compile/link flags already computed above; reuse TF_COMPILE_FLAGS_LIST and TF_LINK_FLAGS_LIST
 
-# Build TensorFlow custom op using system compiler (following TF guide)
-add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/rdktools_tf_ops.so
-    COMMAND g++ -std=c++17 -shared 
-            ${CMAKE_CURRENT_SOURCE_DIR}/src/cpp/tf_string_op.cpp
-            -o ${CMAKE_CURRENT_BINARY_DIR}/rdktools_tf_ops.so
-            -fPIC ${TF_COMPILE_FLAGS_LIST} ${TF_LINK_FLAGS_LIST} -O2
-    DEPENDS src/cpp/tf_string_op.cpp src/cpp/tf_string_op.hpp
-    COMMENT "Building TensorFlow custom op using system compiler"
-    VERBATIM
+# Build TensorFlow custom op
+add_library(rdktools_tf_ops MODULE
+    src/cpp/tf_string_op.cpp
+    src/cpp/ecfp_trace.cpp
 )
 
-# Create a custom target to ensure the TensorFlow op is built
-add_custom_target(tf_ops ALL 
-    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/rdktools_tf_ops.so
+target_include_directories(rdktools_tf_ops PRIVATE
+    src/cpp
+    ${TensorFlow_INCLUDE_DIRS}
 )
 
-# Install TensorFlow ops library
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/rdktools_tf_ops.so 
+target_compile_options(rdktools_tf_ops PRIVATE
+    -O2
+    -fPIC
+    ${TF_COMPILE_FLAGS_LIST}
+)
+
+target_link_options(rdktools_tf_ops PRIVATE
+    ${TF_LINK_FLAGS_LIST}
+)
+
+target_link_libraries(rdktools_tf_ops PRIVATE
+    ${_rdkit_targets}
+)
+
+set_target_properties(rdktools_tf_ops PROPERTIES
+    PREFIX ""
+    OUTPUT_NAME "rdktools_tf_ops"
+)
+
+add_dependencies(rdktools_tf_ops _rdktools_core)
+
+install(TARGETS rdktools_tf_ops
         DESTINATION rdktools)

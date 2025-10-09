@@ -154,6 +154,36 @@ def morgan_fingerprints(smiles, radius: int = 2, nbits: int = 2048) -> np.ndarra
     return _rdktools_core.calculate_morgan_fingerprints(smiles, radius, nbits)
 
 
+def ecfp_reasoning_trace(
+    smiles: str,
+    radius: int = 2,
+    *,
+    isomeric: bool = True,
+    kekulize: bool = False,
+    include_per_center: bool = True,
+) -> str:
+    """
+    Generate an ECFP reasoning trace for a single SMILES string.
+
+    Args:
+        smiles: SMILES string to analyse
+        radius: Morgan fingerprint radius (default: 2)
+        isomeric: Whether to encode stereochemistry in SMARTS fragments
+        kekulize: If true, kekulize the molecule before generating fragments
+        include_per_center: Whether to append per-atom environment chains
+
+    Returns:
+        Multi-line reasoning trace text. Returns an empty string for invalid
+        SMILES strings.
+    """
+    _check_extension()
+    if not isinstance(smiles, str):
+        raise TypeError("SMILES input must be a string")
+    return _rdktools_core.ecfp_reasoning_trace(
+        smiles, radius, isomeric, kekulize, include_per_center
+    )
+
+
 # Convenience functions
 def filter_valid(smiles) -> np.ndarray:
     """
@@ -261,6 +291,7 @@ __all__ = [
     "canonical_smiles",
     "descriptors",
     "morgan_fingerprints",
+    "ecfp_reasoning_trace",
     "filter_valid",
     "batch_process",
 ]
