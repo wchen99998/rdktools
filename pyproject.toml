@@ -32,6 +32,8 @@ cmake.version = ">=3.15"
 # CMake configuration for finding RDKit
 cmake.define.CMAKE_BUILD_TYPE = "Release"
 cmake.define.CMAKE_CXX_STANDARD = "17"
+cmake.define.Python_FIND_VIRTUALENV = "ONLY"
+cmake.define.RDKTOOLS_BOOST_VERSION = "1.88.0"
 logging.level = "INFO"
 
 # Install the compiled module into the rdktools package
@@ -84,3 +86,15 @@ line_length = 88
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-v"
+
+[tool.cibuildwheel]
+build = ["cp312-manylinux_x86_64", "cp312-macosx_arm64"]
+test-requires = ["pytest"]
+test-command = "pytest {project}/tests"
+environment = { RDKTOOLS_BOOST_JOBS = "4" }
+
+[tool.cibuildwheel.linux]
+before-all = "yum install -y git tar bzip2 which eigen3-devel cairo-devel"
+
+[tool.cibuildwheel.macos]
+environment = { MACOSX_DEPLOYMENT_TARGET = "12.0", RDKTOOLS_BOOST_JOBS = "6" }

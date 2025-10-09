@@ -7,7 +7,7 @@ This document provides a comprehensive analysis of the RDKit build artifacts gen
 ## Build Information
 
 - **RDKit Version**: 2025.03.5
-- **Boost Version**: 1.84.0
+- **Boost Version**: 1.88.0
 - **Build Type**: Release
 - **Total Build Output Size**: ~51MB of shared libraries (~73MB static libraries)
 - **Build Date**: August 31, 2025
@@ -95,7 +95,7 @@ Based on the CMake configuration (`rdkit-config.cmake`):
 
 ### Dependencies
 
-- **Boost 1.84.0** with components: headers, system, iostreams, serialization
+- **Boost 1.88.0** with components: headers, system, iostreams, serialization
 - **Eigen3** - Required for 3D descriptors
 - **Threading support** - POSIX threads
 

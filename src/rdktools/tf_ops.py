@@ -7,8 +7,10 @@ TensorFlow graphs and tf.data pipelines.
 """
 
 import os
-import tensorflow as tf
 from typing import Optional
+
+import numpy as np
+import tensorflow as tf
 
 
 def _load_tf_ops():
@@ -87,9 +89,69 @@ def string_process(input_strings: tf.Tensor, name: Optional[str] = None) -> tf.T
     
     return _tf_ops_module.string_process(input_strings, name=name)
 
+
+def create_tf_dataset_op(
+    smiles,
+    *,
+    batch_size: int = 32,
+    shuffle: bool = False,
+    shuffle_buffer_size: Optional[int] = None,
+    prefetch: bool = True,
+) -> tf.data.Dataset:
+    """
+    Convenience helper that builds a tf.data pipeline backed by the custom op.
+
+    Args:
+        smiles: Iterable or tensor of SMILES strings.
+        batch_size: Number of elements per batch.
+        shuffle: Whether to shuffle the dataset.
+        shuffle_buffer_size: Buffer size for shuffling. Defaults to dataset size.
+        prefetch: Whether to add a `prefetch(tf.data.AUTOTUNE)` stage.
+
+    Returns:
+        Configured tf.data.Dataset yielding batches processed through the custom op.
+    """
+    _check_tf_ops()
+
+    if isinstance(smiles, (list, tuple)):
+        smiles = tf.constant(smiles, dtype=tf.string)
+    elif isinstance(smiles, np.ndarray):
+        smiles = tf.constant(smiles.astype(str), dtype=tf.string)
+
+    if isinstance(smiles, tf.Tensor):
+        dataset = tf.data.Dataset.from_tensor_slices(smiles)
+    else:
+        dataset = tf.data.Dataset.from_generator(
+            lambda: smiles,
+            output_signature=tf.TensorSpec(shape=(), dtype=tf.string),
+        )
+
+    dataset = dataset.map(
+        string_process,
+        num_parallel_calls=tf.data.AUTOTUNE,
+    )
+
+    if shuffle:
+        if shuffle_buffer_size is None:
+            try:
+                shuffle_buffer_size = len(smiles)  # type: ignore[arg-type]
+            except TypeError:
+                raise ValueError(
+                    "shuffle_buffer_size must be provided when using generators"
+                ) from None
+        dataset = dataset.shuffle(shuffle_buffer_size)
+
+    dataset = dataset.batch(batch_size)
+
+    if prefetch:
+        dataset = dataset.prefetch(tf.data.AUTOTUNE)
+
+    return dataset
+
 # Export public API
 __all__ = [
     "string_process",
+    "create_tf_dataset_op",
 ]
 
 

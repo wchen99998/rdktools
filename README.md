@@ -79,7 +79,7 @@ cd rdtools
 
 # Set up build env for linking
 conda create -n rdtools -p 3.12
-conda install boost-cpp=1.84 boost=1.84 eigen cairo
+conda install boost-cpp=1.88 boost=1.88 eigen cairo
 
 # 4. Build and install in editable mode
 RDKIT_ROOT=./rdtools/build/rdkit/rdkit pip install -e .
@@ -182,7 +182,7 @@ Performance varies by molecule complexity and system specifications.
 
 ### System Dependencies
 - **RDKit**: >= 2022.9.1 (C++ libraries and headers required)
-- **Boost**: ==1.84.0 
+- **Boost**: ==1.88.0 
 
 
 ### Build Dependencies
@@ -195,4 +195,3 @@ Performance varies by molecule complexity and system specifications.
 ## License
 
 MIT
-
