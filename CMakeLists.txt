@@ -183,9 +183,21 @@ if(TF_INCLUDE_RESULT EQUAL 0 AND TF_LIB_RESULT EQUAL 0 AND TensorFlow_INCLUDE_DI
     if(NOT (TF_COMPILE_RESULT EQUAL 0 AND TF_LINK_RESULT EQUAL 0))
         message(FATAL_ERROR "Failed to obtain TensorFlow compile/link flags from tf.sysconfig")
     endif()
-    # Parse the TensorFlow flags into lists
-    string(REPLACE " " ";" TF_COMPILE_FLAGS_LIST "${TF_COMPILE_FLAGS}")
-    string(REPLACE " " ";" TF_LINK_FLAGS_LIST "${TF_LINK_FLAGS}")
+
+    string(STRIP "${TF_COMPILE_FLAGS}" TF_COMPILE_FLAGS)
+    string(STRIP "${TF_LINK_FLAGS}" TF_LINK_FLAGS)
+
+    if(TF_COMPILE_FLAGS)
+        separate_arguments(TF_COMPILE_FLAGS_LIST NATIVE_COMMAND "${TF_COMPILE_FLAGS}")
+    else()
+        set(TF_COMPILE_FLAGS_LIST "")
+    endif()
+
+    if(TF_LINK_FLAGS)
+        separate_arguments(TF_LINK_FLAGS_LIST NATIVE_COMMAND "${TF_LINK_FLAGS}")
+    else()
+        set(TF_LINK_FLAGS_LIST "")
+    endif()
 else()
     message(FATAL_ERROR "TensorFlow not found. A working 'tensorflow' Python package is required to build the custom op.")
 endif()
@@ -309,7 +321,7 @@ message(STATUS "Found TensorFlow lib dir: ${TensorFlow_LIBRARY_DIRS}")
 
 # Compile/link flags already computed above; reuse TF_COMPILE_FLAGS_LIST and TF_LINK_FLAGS_LIST
 
-# Build TensorFlow custom op
+# Build TensorFlow custom op (standalone module, no linkage to _rdktools_core)
 add_library(rdktools_tf_ops MODULE
     src/cpp/tf_string_op.cpp
     src/cpp/ecfp_trace.cpp
@@ -337,9 +349,8 @@ target_link_libraries(rdktools_tf_ops PRIVATE
 set_target_properties(rdktools_tf_ops PROPERTIES
     PREFIX ""
     OUTPUT_NAME "rdktools_tf_ops"
+    POSITION_INDEPENDENT_CODE ON
 )
-
-add_dependencies(rdktools_tf_ops _rdktools_core)
 
 install(TARGETS rdktools_tf_ops
         DESTINATION rdktools)
