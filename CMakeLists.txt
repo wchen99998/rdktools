@@ -146,6 +146,8 @@ if(NOT EXISTS "${_boost_config_file}")
         link=static
         variant=release
         cxxstd=17
+        cflags=-fPIC
+        cxxflags=-fPIC
         -j
         ${_boost_parallelism}
     )

@@ -17,6 +17,43 @@ RDKTools provides fast molecular descriptor calculations, SMILES validation, and
 
 There's no wheel built yet.
 
+## Local Development Workflow
+
+The project vendors Boost and RDKit automatically during the first configure, so day-to-day C++ iteration can stay fast. A typical loop looks like this:
+
+1. Create a development environment:
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   pip install --upgrade pip
+   ```
+
+2. Install the package in editable mode without build isolation so the build uses the Python from your venv (and its TensorFlow install):
+   ```bash
+   pip install --no-build-isolation -e .
+   ```
+   The first run takes longer because CMake downloads and builds Boost and RDKit into `build/editable-*`. Keep that directory around to avoid rebuilding the dependencies.
+
+3. Rebuild after editing C++ sources without touching the vendored dependencies:
+   ```bash
+   cmake --build build/editable-<tag> --target _rdktools_core
+   cmake --build build/editable-<tag> --target tf_ops  # only if you changed TensorFlow op code
+   ```
+   Replace `<tag>` with the directory suffix CMake chose (for example, `cp312-cp312-macosx_12_0_arm64`).
+
+4. Run tests directly from the same venv:
+   ```bash
+   pytest tests
+   ```
+
+5. Optional: generate a debug build directory once if you need symbols or sanitizers:
+   ```bash
+   cmake -S . -B build/editable-debug -GNinja \
+     -DCMAKE_BUILD_TYPE=Debug \
+     -DPython_EXECUTABLE="$(which python)"
+   cmake --build build/editable-debug --target _rdktools_core
+   ```
+
 ### Dependencies
 
 #### 1. System Dependencies
