@@ -30,6 +30,8 @@ jobs:
       - name: Build wheels
         env:
           CIBW_PLATFORM: linux
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: >
+            auditwheel repair --exclude libtensorflow_framework.so.2 -w {dest_dir} {wheel}
         run: python -m cibuildwheel
 
       - name: Upload artifacts
@@ -63,6 +65,8 @@ jobs:
       - name: Build wheels
         env:
           CIBW_PLATFORM: macos
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
+            delocate-wheel --require-archs {delocate_archs} --ignore-missing-deps -w {dest_dir} -v {wheel}
         run: python -m cibuildwheel
 
       - name: Upload artifacts

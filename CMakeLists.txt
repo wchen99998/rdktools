@@ -143,8 +143,7 @@ if(NOT EXISTS "${_boost_config_file}")
         --build-dir=${_boost_build_dir}
         --layout=system
         threading=multi
-        link=shared
-        runtime-link=shared
+        link=static
         variant=release
         cxxstd=17
         -j
@@ -184,7 +183,7 @@ set(BOOST_ROOT "${_boost_install_dir}" CACHE PATH "Boost install prefix used for
 set(BOOST_INCLUDEDIR "${BOOST_ROOT}/include" CACHE PATH "Boost include path" FORCE)
 set(BOOST_LIBRARYDIR "${BOOST_ROOT}/lib" CACHE PATH "Boost library path" FORCE)
 set(Boost_NO_SYSTEM_PATHS ON CACHE BOOL "Disallow searching system paths for Boost" FORCE)
-set(Boost_USE_STATIC_LIBS OFF CACHE BOOL "" FORCE)
+set(Boost_USE_STATIC_LIBS ON CACHE BOOL "" FORCE)
 set(Boost_USE_STATIC_RUNTIME OFF CACHE BOOL "" FORCE)
 set(Boost_USE_MULTITHREADED ON CACHE BOOL "" FORCE)
 
@@ -200,15 +199,17 @@ set(ENV{BOOST_LIBRARYDIR} "${BOOST_LIBRARYDIR}")
 message(STATUS "Using vendored Boost ${RDKTOOLS_BOOST_VERSION} from ${BOOST_ROOT}")
 
 # Install Boost runtime libraries alongside the extension for wheel packaging
-install(
-    DIRECTORY "${BOOST_LIBRARYDIR}/"
-    DESTINATION rdktools/vendor/boost/lib
-    FILES_MATCHING
-        PATTERN "*.so"
-        PATTERN "*.so.*"
-        PATTERN "*.dylib"
-        PATTERN "*.dll"
-)
+if(NOT Boost_USE_STATIC_LIBS)
+    install(
+        DIRECTORY "${BOOST_LIBRARYDIR}/"
+        DESTINATION rdktools/vendor/boost/lib
+        FILES_MATCHING
+            PATTERN "*.so"
+            PATTERN "*.so.*"
+            PATTERN "*.dylib"
+            PATTERN "*.dll"
+    )
+endif()
 
 # -----------------------------
 # TensorFlow search (required)
@@ -344,20 +345,22 @@ set_target_properties(_rdktools_core PROPERTIES
     INTERPROCEDURAL_OPTIMIZATION TRUE
 )
 
-set(_rdktools_boost_build_rpath "${BOOST_LIBRARYDIR}")
-if(APPLE)
-    set(_rdktools_boost_install_rpath "@loader_path/vendor/boost/lib")
-elseif(UNIX)
-    set(_rdktools_boost_install_rpath "$ORIGIN/vendor/boost/lib")
-else()
-    set(_rdktools_boost_install_rpath "")
-endif()
+if(NOT Boost_USE_STATIC_LIBS)
+    set(_rdktools_boost_build_rpath "${BOOST_LIBRARYDIR}")
+    if(APPLE)
+        set(_rdktools_boost_install_rpath "@loader_path/vendor/boost/lib")
+    elseif(UNIX)
+        set(_rdktools_boost_install_rpath "$ORIGIN/vendor/boost/lib")
+    else()
+        set(_rdktools_boost_install_rpath "")
+    endif()
 
-if(_rdktools_boost_install_rpath)
-    set_target_properties(_rdktools_core PROPERTIES
-        BUILD_RPATH "${_rdktools_boost_build_rpath}"
-        INSTALL_RPATH "${_rdktools_boost_install_rpath}"
-    )
+    if(_rdktools_boost_install_rpath)
+        set_target_properties(_rdktools_core PROPERTIES
+            BUILD_RPATH "${_rdktools_boost_build_rpath}"
+            INSTALL_RPATH "${_rdktools_boost_install_rpath}"
+        )
+    endif()
 endif()
 
 # Platform-specific settings
