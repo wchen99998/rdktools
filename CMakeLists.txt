@@ -13,9 +13,52 @@ if(NOT DEFINED Python_FIND_VIRTUALENV)
         set(Python_FIND_VIRTUALENV FIRST CACHE STRING "Search system Python first (no project .venv detected)" FORCE)
     endif()
 endif()
+
 if(EXISTS "${CMAKE_SOURCE_DIR}/.venv")
     set(Python_ROOT_DIR "${CMAKE_SOURCE_DIR}/.venv" CACHE PATH "Python virtual environment root" FORCE)
 endif()
+
+if(NOT Python_EXECUTABLE)
+    foreach(_py_var PYTHON_EXECUTABLE PYTHON PYBIN CIBUILDWHEEL_PYTHON CIBW_PYTHON)
+        if(NOT Python_EXECUTABLE AND DEFINED ENV{${_py_var}})
+            set(_python_candidate "$ENV{${_py_var}}")
+            if(EXISTS "${_python_candidate}")
+                set(Python_EXECUTABLE "${_python_candidate}" CACHE FILEPATH "Python interpreter used for the build" FORCE)
+            endif()
+        endif()
+    endforeach()
+endif()
+
+if(NOT Python_EXECUTABLE)
+    if(DEFINED ENV{PYTHON_EXECUTABLE})
+        set(Python_EXECUTABLE "$ENV{PYTHON_EXECUTABLE}" CACHE FILEPATH "Python interpreter used for the build" FORCE)
+    else()
+        execute_process(
+            COMMAND "${CMAKE_COMMAND}" -E env python3 -c "import sys; print(sys.executable)"
+            OUTPUT_VARIABLE _python_from_cmake
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_QUIET
+        )
+        if(_python_from_cmake)
+            set(Python_EXECUTABLE "${_python_from_cmake}" CACHE FILEPATH "Python interpreter used for the build" FORCE)
+        endif()
+    endif()
+else()
+    set(Python_EXECUTABLE "${Python_EXECUTABLE}" CACHE FILEPATH "Python interpreter used for the build" FORCE)
+endif()
+
+if(Python_EXECUTABLE AND NOT DEFINED Python_ROOT_DIR)
+    get_filename_component(_python_bindir "${Python_EXECUTABLE}" DIRECTORY)
+    get_filename_component(_python_prefix "${_python_bindir}/.." REALPATH)
+    if(EXISTS "${_python_prefix}/include")
+        set(Python_ROOT_DIR "${_python_prefix}" CACHE PATH "Python installation prefix detected from interpreter" FORCE)
+    endif()
+endif()
+
+set(Python_FIND_STRATEGY LOCATION CACHE STRING "Search locations first so the specified interpreter is honored" FORCE)
+set(Python_FIND_FRAMEWORK LAST CACHE STRING "Avoid picking macOS frameworks unless necessary" FORCE)
+set(Python_FIND_IMPLEMENTATIONS "CPython" CACHE STRING "Prefer CPython implementation" FORCE)
+
 find_package(Python COMPONENTS Interpreter Development REQUIRED)
 
 if(NOT nanobind_DIR)
