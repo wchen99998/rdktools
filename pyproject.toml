@@ -32,7 +32,6 @@ cmake.version = ">=3.15"
 # CMake configuration for finding RDKit
 cmake.define.CMAKE_BUILD_TYPE = "Release"
 cmake.define.CMAKE_CXX_STANDARD = "17"
-cmake.define.Python_FIND_VIRTUALENV = "ONLY"
 cmake.define.RDKTOOLS_BOOST_VERSION = "1.88.0"
 logging.level = "INFO"
 
