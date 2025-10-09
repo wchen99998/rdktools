@@ -59,7 +59,7 @@ set(Python_FIND_STRATEGY LOCATION CACHE STRING "Search locations first so the sp
 set(Python_FIND_FRAMEWORK LAST CACHE STRING "Avoid picking macOS frameworks unless necessary" FORCE)
 set(Python_FIND_IMPLEMENTATIONS "CPython" CACHE STRING "Prefer CPython implementation" FORCE)
 
-find_package(Python COMPONENTS Interpreter Development REQUIRED)
+find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
 
 if(NOT nanobind_DIR)
     set(_nanobind_hints "")
