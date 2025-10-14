@@ -57,4 +57,5 @@ def test_create_tf_dataset_batches():
         text = text_bytes.decode()
         assert text.startswith("r0:")
         assert bits.shape == (FP_SIZE,)
+        
         assert bits.dtype == np.uint8
