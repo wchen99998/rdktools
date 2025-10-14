@@ -93,7 +93,7 @@ test-command = "pytest {project}/tests"
 environment = { RDKTOOLS_BOOST_JOBS = "4" }
 
 [tool.cibuildwheel.linux]
-before-all = "yum install -y git tar bzip2 which eigen3-devel cairo-devel"
+before-all = "yum install -y git tar bzip2 which eigen3-devel cairo-devel hdf5-devel"
 
 [tool.cibuildwheel.macos]
 environment = { MACOSX_DEPLOYMENT_TARGET = "12.0", RDKTOOLS_BOOST_JOBS = "6" }
