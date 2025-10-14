@@ -170,14 +170,17 @@ Calculate Morgan fingerprints as bit vectors.
 Generate a human-readable explanation of the environments that contribute to the ECFP (Morgan) fingerprint for a single SMILES string.
 
 **Returns:**
-- Multi-line string with aggregated tokens by radius followed by optional per-atom environment chains.
+- Tuple `(trace, fingerprint)` where `trace` is a multi-line string with
+  aggregated tokens and optional per-atom environment chains, and `fingerprint`
+  is a NumPy array of shape `(2048,)` with dtype `uint8`.
 
 **Example:**
 ```python
 import rdtools
 
-trace = rdtools.ecfp_reasoning_trace("CCO")
+trace, fingerprint = rdtools.ecfp_reasoning_trace("CCO")
 print(trace)
+print(fingerprint.shape)  # (2048,)
 # r0: r0:[#6]×2, r0:[#8]×1
 # r1: r1:[#6]-[#6]×2
 #
@@ -187,7 +190,8 @@ print(trace)
 # O2: r0:[#8]
 ```
 
-Invalid SMILES return an empty string, allowing the caller to decide how to surface errors.
+Invalid SMILES return an empty string and an all-zero fingerprint, allowing the
+caller to decide how to surface errors.
 
 ### Utility Functions
 
@@ -206,7 +210,10 @@ TensorFlow custom operation for string processing in data pipelines.
 - `smiles_tensor`: TensorFlow string tensor
 
 **Returns:**
-- TensorFlow string tensor where each element contains the ECFP reasoning trace. Invalid inputs yield the literal `[invalid]`.
+- Tuple `(traces, fingerprints)` where `traces` mirrors the input shape with
+  string tensors of reasoning traces and `fingerprints` appends a trailing
+  dimension of length `2048` containing the uint8 bit vectors. Invalid inputs
+  yield `[invalid]` traces and zeroed fingerprints.
 
 **Example:**
 ```python
@@ -217,8 +224,9 @@ import rdtools.tf_ops
 dataset = tf.data.Dataset.from_tensor_slices(["CCO", "c1ccccc1"])
 dataset = dataset.map(rdtools.tf_ops.string_process)
 
-for trace in dataset.take(1):
-    print(trace.numpy().decode())
+for traces, fingerprints in dataset.take(1):
+    print(traces.numpy()[0].decode())
+    print(fingerprints.numpy()[0].shape)
     # r0: ...
 ```
 

@@ -7,7 +7,7 @@ TensorFlow graphs and tf.data pipelines.
 """
 
 import os
-from typing import Optional
+from typing import Optional, Tuple
 
 import numpy as np
 import tensorflow as tf
@@ -52,21 +52,19 @@ def _check_tf_ops():
         )
 
 
-def string_process(input_strings: tf.Tensor, name: Optional[str] = None) -> tf.Tensor:
+def string_process(input_strings: tf.Tensor,
+                   name: Optional[str] = None) -> Tuple[tf.Tensor, tf.Tensor]:
     """
-    Process string tensors through a custom C++ operation.
-    
-    This operation can be used in TensorFlow data pipelines to perform
-    custom string processing operations. Currently implemented as a 
-    pass-through operation that returns the input unchanged, but can be
-    extended to perform custom molecular string processing.
+    Generate reasoning traces and Morgan fingerprints for SMILES tensors.
     
     Args:
         input_strings: A string tensor to process.
         name: Optional name for the operation.
         
     Returns:
-        A string tensor with the same shape as the input.
+        Tuple `(traces, fingerprints)` where `traces` matches the input shape
+        with string tensors containing the reasoning trace, and `fingerprints`
+        appends a trailing dimension of size `2048` with the uint8 fingerprint.
         
     Raises:
         ImportError: If TensorFlow custom ops are not available.
@@ -77,13 +75,15 @@ def string_process(input_strings: tf.Tensor, name: Optional[str] = None) -> tf.T
         >>> 
         >>> # Create a dataset with SMILES strings
         >>> smiles = tf.constant(["CCO", "c1ccccc1", "CC(=O)O"])
-        >>> processed = string_process(smiles)
-        >>> print(processed.numpy())
-        [b'CCO' b'c1ccccc1' b'CC(=O)O']
+        >>> traces, fps = string_process(smiles)
+        >>> print(traces.numpy()[0])
+        >>> print(fps.numpy()[0].shape)
         
         # Use in a tf.data pipeline
         >>> dataset = tf.data.Dataset.from_tensor_slices(["CCO", "c1ccccc1"])
-        >>> dataset = dataset.map(lambda x: string_process(x))
+        >>> dataset = dataset.map(string_process)
+        >>> for traces, fps in dataset.take(1):
+        ...     print(traces.numpy()[0], fps.numpy()[0].sum())
     """
     _check_tf_ops()
     
@@ -109,7 +109,8 @@ def create_tf_dataset_op(
         prefetch: Whether to add a `prefetch(tf.data.AUTOTUNE)` stage.
 
     Returns:
-        Configured tf.data.Dataset yielding batches processed through the custom op.
+        Configured tf.data.Dataset yielding batches of `(traces, fingerprints)`
+        tensors produced by the custom op.
     """
     _check_tf_ops()
 

@@ -3,10 +3,14 @@
 Pytest suite for TensorFlow custom ops integration.
 """
 
+import numpy as np
 import pytest
 
 tf = pytest.importorskip("tensorflow")
 tf_ops = pytest.importorskip("rdktools.tf_ops")
+rdktools = pytest.importorskip("rdktools")
+
+FP_SIZE = rdktools.ECFP_REASONING_FINGERPRINT_SIZE
 
 if not tf_ops.is_tf_ops_available():
     pytest.skip(
@@ -18,14 +22,20 @@ if not tf_ops.is_tf_ops_available():
 def test_string_process_generates_trace():
     inputs = tf.constant(["CCO", "c1ccccc1", "CC(=O)O"])
 
-    outputs = tf_ops.string_process(inputs)
+    traces, fingerprints = tf_ops.string_process(inputs)
 
-    assert outputs.shape == inputs.shape
-    decoded = outputs.numpy()
-    for value in decoded:
+    assert traces.shape == inputs.shape
+    assert fingerprints.shape == inputs.shape + (FP_SIZE,)
+    assert fingerprints.dtype == tf.uint8
+
+    decoded = traces.numpy()
+    for idx, value in enumerate(decoded):
         text = value.decode()
         assert "r0:" in text
         assert "# per-center chains" in text
+        # ensure fingerprints have at least one bit set for valid SMILES
+        assert fingerprints[idx].shape[-1] == FP_SIZE
+        assert int(tf.reduce_sum(fingerprints[idx]).numpy()) >= 0
 
 
 def test_create_tf_dataset_batches():
@@ -35,8 +45,16 @@ def test_create_tf_dataset_batches():
     batches = list(dataset)
     assert len(batches) == 2
 
-    flattened = tf.concat(batches, axis=0).numpy()
-    assert len(flattened) == len(smiles)
-    for value in flattened:
-        text = value.decode()
+    trace_batches, fingerprint_batches = zip(*batches)
+    trace_concat = tf.concat(trace_batches, axis=0).numpy()
+    fingerprint_concat = tf.concat(fingerprint_batches, axis=0).numpy()
+
+    assert trace_concat.shape == (len(smiles),)
+    assert fingerprint_concat.shape == (len(smiles), FP_SIZE)
+    assert fingerprint_concat.dtype == tf.uint8
+
+    for text_bytes, bits in zip(trace_concat, fingerprint_concat):
+        text = text_bytes.decode()
         assert text.startswith("r0:")
+        assert bits.shape == (FP_SIZE,)
+        assert bits.dtype == np.uint8

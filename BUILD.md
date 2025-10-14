@@ -48,12 +48,13 @@ The following steps reproduce the wheel build and verification process starting 
    ```bash
    PYTHONPATH='' .venv_test/bin/python - <<'PY'
    import rdktools
-   trace = rdktools.ecfp_reasoning_trace("CCO")
+   trace, fingerprint = rdktools.ecfp_reasoning_trace("CCO")
    print(trace.splitlines()[:10])
    print(f"Trace length: {len(trace)} characters")
+    print(f"Fingerprint bits set: {int(fingerprint.sum())}")
    PY
    ```
-   Expect a multi-line reasoning trace with at least the first few lines describing radius `r0` and per-center chains.
+   Expect a multi-line reasoning trace with at least the first few lines describing radius `r0`, along with a non-zero fingerprint bit count.
 
 8. **Cleanup (optional)**
    ```bash

@@ -1,5 +1,6 @@
 #include "ecfp_trace.hpp"
 
+#include <DataStructs/ExplicitBitVect.h>
 #include <GraphMol/Descriptors/MolDescriptors.h>
 #include <GraphMol/Fingerprints/FingerprintGenerator.h>
 #include <GraphMol/Fingerprints/MorganFingerprints.h>
@@ -172,6 +173,41 @@ BitInfoMap collect_morgan_bitinfo(const RDKit::ROMol& mol, unsigned int radius,
                                        : BitInfoMap{};
 }
 
+std::vector<std::uint8_t> compute_morgan_fingerprint_bits(
+    const RDKit::ROMol& mol,
+    unsigned int radius,
+    bool includeChirality) {
+    std::vector<std::uint8_t> bits(
+        rdktools::kECFPReasoningFingerprintSize, 0);
+    try {
+        std::unique_ptr<::ExplicitBitVect> fp(
+            RDKit::MorganFingerprints::getFingerprintAsBitVect(
+                mol,
+                radius,
+                static_cast<unsigned int>(
+                    rdktools::kECFPReasoningFingerprintSize),
+                nullptr,
+                nullptr,
+                includeChirality,
+                true,
+                false,
+                nullptr));
+        if (!fp) {
+            return bits;
+        }
+
+        for (unsigned int idx = 0;
+             idx < static_cast<unsigned int>(
+                       rdktools::kECFPReasoningFingerprintSize);
+             ++idx) {
+            bits[idx] = fp->getBit(idx) ? 1U : 0U;
+        }
+    } catch (const std::exception&) {
+        // Leave bits zeroed on failure.
+    }
+    return bits;
+}
+
 std::map<unsigned int, std::map<unsigned int, std::string>>
 ecfp_env_tokens_by_center(const RDKit::ROMol& source, unsigned int radius,
                           bool isomeric, bool kekulize,
@@ -266,19 +302,25 @@ std::unique_ptr<RDKit::ROMol> smiles_to_mol(const std::string& smiles) {
 
 namespace rdktools {
 
-std::string ecfp_reasoning_trace_from_smiles(
+ReasoningTraceResult ecfp_reasoning_trace_from_smiles(
     const std::string& smiles,
     unsigned int radius,
     bool isomeric,
     bool kekulize,
     bool include_per_center) {
+    std::vector<std::uint8_t> fingerprint(
+        rdktools::kECFPReasoningFingerprintSize,
+        static_cast<std::uint8_t>(0));
+
     auto mol = smiles_to_mol(smiles);
     if (!mol) {
-        return "";
+        return {std::string(), std::move(fingerprint)};
     }
 
     const auto per_center = ecfp_env_tokens_by_center(
         *mol, radius, isomeric, kekulize, true, true);
+    fingerprint = compute_morgan_fingerprint_bits(
+        *mol, radius, isomeric);
 
     std::map<unsigned int, std::map<std::string, unsigned int>> by_radius;
     for (const auto& center_entry : per_center) {
@@ -338,7 +380,7 @@ std::string ecfp_reasoning_trace_from_smiles(
         }
     }
 
-    return join_lines(lines);
+    return {join_lines(lines), std::move(fingerprint)};
 }
 
 } // namespace rdktools

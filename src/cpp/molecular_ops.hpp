@@ -91,7 +91,7 @@ nanobind::ndarray<nanobind::numpy, uint8_t> calculate_morgan_fingerprints(
  * @param include_per_center Whether to include per-atom chains in the trace
  * @return Multi-line reasoning trace text. Invalid SMILES yield an empty string.
  */
-std::string ecfp_reasoning_trace(
+nanobind::tuple ecfp_reasoning_trace(
     const std::string& smiles,
     int radius = 2,
     bool isomeric = true,

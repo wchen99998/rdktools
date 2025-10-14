@@ -5,7 +5,7 @@ This module provides fast molecular descriptor calculations, SMILES validation, 
 generation by exposing RDKit's optimized C++ implementation with native numpy array support.
 """
 
-from typing import Dict
+from typing import Dict, Tuple
 
 import numpy as np
 
@@ -154,6 +154,9 @@ def morgan_fingerprints(smiles, radius: int = 2, nbits: int = 2048) -> np.ndarra
     return _rdktools_core.calculate_morgan_fingerprints(smiles, radius, nbits)
 
 
+ECFP_REASONING_FINGERPRINT_SIZE = 2048
+
+
 def ecfp_reasoning_trace(
     smiles: str,
     radius: int = 2,
@@ -161,7 +164,7 @@ def ecfp_reasoning_trace(
     isomeric: bool = True,
     kekulize: bool = False,
     include_per_center: bool = True,
-) -> str:
+) -> Tuple[str, np.ndarray]:
     """
     Generate an ECFP reasoning trace for a single SMILES string.
 
@@ -173,15 +176,24 @@ def ecfp_reasoning_trace(
         include_per_center: Whether to append per-atom environment chains
 
     Returns:
-        Multi-line reasoning trace text. Returns an empty string for invalid
-        SMILES strings.
+        Tuple where the first element is the multi-line reasoning trace text
+        and the second element is a uint8 numpy array containing the Morgan
+        fingerprint bits. Invalid SMILES return an empty trace and an all-zero
+        fingerprint.
     """
     _check_extension()
     if not isinstance(smiles, str):
         raise TypeError("SMILES input must be a string")
-    return _rdktools_core.ecfp_reasoning_trace(
+    trace, fingerprint = _rdktools_core.ecfp_reasoning_trace(
         smiles, radius, isomeric, kekulize, include_per_center
     )
+    fingerprint = np.asarray(fingerprint, dtype=np.uint8).reshape(-1)
+    if fingerprint.size != ECFP_REASONING_FINGERPRINT_SIZE:
+        padded = np.zeros(ECFP_REASONING_FINGERPRINT_SIZE, dtype=np.uint8)
+        length = min(fingerprint.size, ECFP_REASONING_FINGERPRINT_SIZE)
+        padded[:length] = fingerprint[:length]
+        fingerprint = padded
+    return trace, fingerprint
 
 
 # Convenience functions
@@ -292,6 +304,7 @@ __all__ = [
     "descriptors",
     "morgan_fingerprints",
     "ecfp_reasoning_trace",
+    "ECFP_REASONING_FINGERPRINT_SIZE",
     "filter_valid",
     "batch_process",
 ]

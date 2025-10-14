@@ -211,16 +211,64 @@ class TestReasoningTrace:
 
     def test_ecfp_reasoning_trace_basic(self):
         """Trace contains aggregate and per-center sections."""
-        trace = rdktools.ecfp_reasoning_trace("CCO")
+        trace, fingerprint = rdktools.ecfp_reasoning_trace("CCO")
 
         assert isinstance(trace, str)
+        assert isinstance(fingerprint, np.ndarray)
+        assert fingerprint.dtype == np.uint8
+        assert fingerprint.shape == (
+            rdktools.ECFP_REASONING_FINGERPRINT_SIZE,
+        )
         assert "r0:" in trace
         assert "# per-center chains" in trace
         assert "C0:" in trace
+        assert fingerprint.sum() > 0
 
     def test_ecfp_reasoning_trace_invalid_smiles(self):
         """Invalid SMILES should result in empty trace."""
-        assert rdktools.ecfp_reasoning_trace("not_a_smiles") == ""
+        trace, fingerprint = rdktools.ecfp_reasoning_trace("not_a_smiles")
+        assert trace == ""
+        assert fingerprint.shape == (
+            rdktools.ECFP_REASONING_FINGERPRINT_SIZE,
+        )
+        assert fingerprint.dtype == np.uint8
+        assert np.count_nonzero(fingerprint) == 0
+
+    def test_ecfp_reasoning_trace_aromatic_complex(self):
+        """Complex aromatic systems should include higher-radius tokens."""
+        smiles = "CC(=O)Oc1ccccc1C(=O)O"  # aspirin
+        trace, fingerprint = rdktools.ecfp_reasoning_trace(
+            smiles, radius=3, include_per_center=True
+        )
+
+        assert any(
+            line.startswith("r2:") or line.startswith("r3:")
+            for line in trace.splitlines()
+        )
+        assert "# per-center chains" in trace
+        assert fingerprint.dtype == np.uint8
+        assert fingerprint.shape == (
+            rdktools.ECFP_REASONING_FINGERPRINT_SIZE,
+        )
+        assert int(fingerprint.sum()) > 12
+
+    def test_ecfp_reasoning_trace_fingerprint_distinguishes_substituents(self):
+        """Fingerprints should differ for closely related scaffolds."""
+        base = "CC(=O)Oc1ccccc1C(=O)O"  # aspirin
+        variant = "CC(=O)Oc1ccccc1C(=O)Cl"  # salicylic chloride derivative
+
+        _, fp_base = rdktools.ecfp_reasoning_trace(base, radius=3)
+        _, fp_variant = rdktools.ecfp_reasoning_trace(variant, radius=3)
+
+        assert fp_base.dtype == fp_variant.dtype == np.uint8
+        assert fp_base.shape == fp_variant.shape == (
+            rdktools.ECFP_REASONING_FINGERPRINT_SIZE,
+        )
+        # ensure the fingerprints are not identical
+        assert not np.array_equal(fp_base, fp_variant)
+        # And both carry substantial information
+        assert int(fp_base.sum()) > 12
+        assert int(fp_variant.sum()) > 12
 
 
 class TestInputValidation:

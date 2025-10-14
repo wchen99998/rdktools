@@ -57,7 +57,7 @@ NB_MODULE(_rdktools_core, m) {
     
     // ECFP reasoning trace
     m.def("ecfp_reasoning_trace", &rdktools::ecfp_reasoning_trace,
-          "Generate an ECFP reasoning trace for a SMILES string",
+          "Generate an ECFP reasoning trace and fingerprint for a SMILES string",
           "smiles"_a,
           "radius"_a = 2,
           "isomeric"_a = true,

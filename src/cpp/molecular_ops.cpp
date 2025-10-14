@@ -212,15 +212,29 @@ nb::ndarray<nb::numpy, uint8_t> calculate_morgan_fingerprints(
     return nb::ndarray<nb::numpy, uint8_t>(data, {size, static_cast<size_t>(nbits)}, owner);
 }
 
-std::string ecfp_reasoning_trace(const std::string& smiles,
-                                 int radius,
-                                 bool isomeric,
-                                 bool kekulize,
-                                 bool include_per_center) {
+nb::tuple ecfp_reasoning_trace(const std::string& smiles,
+                               int radius,
+                               bool isomeric,
+                               bool kekulize,
+                               bool include_per_center) {
     const unsigned int fp_radius =
         radius < 0 ? 0U : static_cast<unsigned int>(radius);
-    return ecfp_reasoning_trace_from_smiles(
+    auto trace_result = ecfp_reasoning_trace_from_smiles(
         smiles, fp_radius, isomeric, kekulize, include_per_center);
+    std::string trace = std::move(std::get<0>(trace_result));
+    std::vector<std::uint8_t> fingerprint =
+        std::move(std::get<1>(trace_result));
+
+    const std::size_t fp_size = fingerprint.size();
+    uint8_t* data = new uint8_t[fp_size];
+    std::copy(fingerprint.begin(), fingerprint.end(), data);
+    nb::capsule owner(data, [](void* p) noexcept {
+        delete[] static_cast<uint8_t*>(p);
+    });
+    auto fingerprint_array =
+        nb::ndarray<nb::numpy, uint8_t>(data, {fp_size}, owner);
+
+    return nb::make_tuple(std::move(trace), std::move(fingerprint_array));
 }
 
 } // namespace rdktools
