@@ -38,6 +38,19 @@ def test_string_process_generates_trace():
         assert int(tf.reduce_sum(fingerprints[idx]).numpy()) >= 0
 
 
+def test_string_process_custom_fingerprint_size():
+    inputs = tf.constant(["CCO"])
+
+    traces, fingerprints = tf_ops.string_process(
+        inputs, fingerprint_size=512
+    )
+
+    assert traces.shape == inputs.shape
+    assert fingerprints.shape == inputs.shape + (512,)
+    assert fingerprints.dtype == tf.uint8
+    assert int(tf.reduce_sum(fingerprints[0]).numpy()) >= 0
+
+
 def test_create_tf_dataset_batches():
     smiles = ["CCO", "c1ccccc1", "CC(=O)O", "CCC"]
     dataset = tf_ops.create_tf_dataset_op(smiles, batch_size=2, prefetch=False)
@@ -59,3 +72,18 @@ def test_create_tf_dataset_batches():
         assert bits.shape == (FP_SIZE,)
         
         assert bits.dtype == np.uint8
+
+
+def test_create_tf_dataset_batches_custom_size():
+    smiles = ["CCO", "c1ccccc1"]
+    dataset = tf_ops.create_tf_dataset_op(
+        smiles, batch_size=1, prefetch=False, fingerprint_size=512
+    )
+
+    batches = list(dataset)
+    assert len(batches) == len(smiles)
+
+    for trace_batch, fp_batch in batches:
+        assert trace_batch.shape == (1,)
+        assert fp_batch.shape == (1, 512)
+        assert fp_batch.dtype == tf.uint8

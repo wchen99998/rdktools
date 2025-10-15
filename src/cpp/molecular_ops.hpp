@@ -1,8 +1,6 @@
 #pragma once
 
-#include <vector>
-#include <string>
-#include <memory>
+#include "ecfp_trace.hpp"
 #include <GraphMol/GraphMol.h>
 #include <GraphMol/SmilesParse/SmilesParse.h>
 #include <GraphMol/Descriptors/MolDescriptors.h>
@@ -10,8 +8,11 @@
 #include <GraphMol/MolPickler.h>
 #include <nanobind/nanobind.h>
 #include <nanobind/ndarray.h>
-#include <nanobind/stl/vector.h>
 #include <nanobind/stl/string.h>
+#include <nanobind/stl/vector.h>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace rdktools {
 
@@ -89,6 +90,7 @@ nanobind::ndarray<nanobind::numpy, uint8_t> calculate_morgan_fingerprints(
  * @param isomeric Whether to include stereochemistry when generating SMARTS
  * @param kekulize Whether to kekulize the molecule before generating fragments
  * @param include_per_center Whether to include per-atom chains in the trace
+ * @param fingerprint_size Desired fingerprint length in bits (default: 2048)
  * @return Multi-line reasoning trace text. Invalid SMILES yield an empty string.
  */
 nanobind::tuple ecfp_reasoning_trace(
@@ -96,7 +98,9 @@ nanobind::tuple ecfp_reasoning_trace(
     int radius = 2,
     bool isomeric = true,
     bool kekulize = false,
-    bool include_per_center = true
+    bool include_per_center = true,
+    int fingerprint_size =
+        static_cast<int>(kECFPReasoningFingerprintSize)
 );
 
 } // namespace rdktools

@@ -52,19 +52,25 @@ def _check_tf_ops():
         )
 
 
-def string_process(input_strings: tf.Tensor,
-                   name: Optional[str] = None) -> Tuple[tf.Tensor, tf.Tensor]:
+def string_process(
+    input_strings: tf.Tensor,
+    name: Optional[str] = None,
+    fingerprint_size: int = 2048,
+) -> Tuple[tf.Tensor, tf.Tensor]:
     """
     Generate reasoning traces and Morgan fingerprints for SMILES tensors.
     
     Args:
         input_strings: A string tensor to process.
         name: Optional name for the operation.
+        fingerprint_size: Desired fingerprint length in bits. Non-positive
+            values fall back to the default of 2048.
         
     Returns:
         Tuple `(traces, fingerprints)` where `traces` matches the input shape
         with string tensors containing the reasoning trace, and `fingerprints`
-        appends a trailing dimension of size `2048` with the uint8 fingerprint.
+        appends a trailing dimension of size `fingerprint_size` (default 2048)
+        with the uint8 fingerprint.
         
     Raises:
         ImportError: If TensorFlow custom ops are not available.
@@ -86,8 +92,14 @@ def string_process(input_strings: tf.Tensor,
         ...     print(traces.numpy()[0], fps.numpy()[0].sum())
     """
     _check_tf_ops()
-    
-    return _tf_ops_module.string_process(input_strings, name=name)
+
+    if not isinstance(fingerprint_size, int):
+        raise TypeError("fingerprint_size must be an int")
+    size = fingerprint_size if fingerprint_size > 0 else 2048
+
+    return _tf_ops_module.string_process(
+        input_strings, fingerprint_size=size, name=name
+    )
 
 
 def create_tf_dataset_op(
@@ -97,6 +109,7 @@ def create_tf_dataset_op(
     shuffle: bool = False,
     shuffle_buffer_size: Optional[int] = None,
     prefetch: bool = True,
+    fingerprint_size: int = 2048,
 ) -> tf.data.Dataset:
     """
     Convenience helper that builds a tf.data pipeline backed by the custom op.
@@ -107,6 +120,8 @@ def create_tf_dataset_op(
         shuffle: Whether to shuffle the dataset.
         shuffle_buffer_size: Buffer size for shuffling. Defaults to dataset size.
         prefetch: Whether to add a `prefetch(tf.data.AUTOTUNE)` stage.
+        fingerprint_size: Desired fingerprint length for the op. Non-positive
+            values fall back to 2048.
 
     Returns:
         Configured tf.data.Dataset yielding batches of `(traces, fingerprints)`
@@ -128,7 +143,9 @@ def create_tf_dataset_op(
         )
 
     dataset = dataset.map(
-        string_process,
+        lambda value: string_process(
+            value, fingerprint_size=fingerprint_size
+        ),
         num_parallel_calls=tf.data.AUTOTUNE,
     )
 

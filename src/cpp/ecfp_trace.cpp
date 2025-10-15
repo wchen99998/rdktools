@@ -12,6 +12,7 @@
 #include <GraphMol/Subgraphs/Subgraphs.h>
 #include <RDGeneral/RDLog.h>
 #include <algorithm>
+#include <limits>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -176,16 +177,21 @@ BitInfoMap collect_morgan_bitinfo(const RDKit::ROMol& mol, unsigned int radius,
 std::vector<std::uint8_t> compute_morgan_fingerprint_bits(
     const RDKit::ROMol& mol,
     unsigned int radius,
-    bool includeChirality) {
-    std::vector<std::uint8_t> bits(
-        rdktools::kECFPReasoningFingerprintSize, 0);
+    bool includeChirality,
+    std::size_t fingerprint_size) {
+    std::vector<std::uint8_t> bits(fingerprint_size, 0);
+    if (fingerprint_size == 0 ||
+        fingerprint_size > std::numeric_limits<unsigned int>::max()) {
+        return bits;
+    }
+    const auto num_bits =
+        static_cast<unsigned int>(fingerprint_size);
     try {
         std::unique_ptr<::ExplicitBitVect> fp(
             RDKit::MorganFingerprints::getFingerprintAsBitVect(
                 mol,
                 radius,
-                static_cast<unsigned int>(
-                    rdktools::kECFPReasoningFingerprintSize),
+                num_bits,
                 nullptr,
                 nullptr,
                 includeChirality,
@@ -197,9 +203,7 @@ std::vector<std::uint8_t> compute_morgan_fingerprint_bits(
         }
 
         for (unsigned int idx = 0;
-             idx < static_cast<unsigned int>(
-                       rdktools::kECFPReasoningFingerprintSize);
-             ++idx) {
+             idx < num_bits; ++idx) {
             bits[idx] = fp->getBit(idx) ? 1U : 0U;
         }
     } catch (const std::exception&) {
@@ -307,9 +311,10 @@ ReasoningTraceResult ecfp_reasoning_trace_from_smiles(
     unsigned int radius,
     bool isomeric,
     bool kekulize,
-    bool include_per_center) {
+    bool include_per_center,
+    std::size_t fingerprint_size) {
     std::vector<std::uint8_t> fingerprint(
-        rdktools::kECFPReasoningFingerprintSize,
+        fingerprint_size,
         static_cast<std::uint8_t>(0));
 
     auto mol = smiles_to_mol(smiles);
@@ -320,7 +325,7 @@ ReasoningTraceResult ecfp_reasoning_trace_from_smiles(
     const auto per_center = ecfp_env_tokens_by_center(
         *mol, radius, isomeric, kekulize, true, true);
     fingerprint = compute_morgan_fingerprint_bits(
-        *mol, radius, isomeric);
+        *mol, radius, isomeric, fingerprint_size);
 
     std::map<unsigned int, std::map<std::string, unsigned int>> by_radius;
     for (const auto& center_entry : per_center) {

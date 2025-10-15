@@ -216,11 +216,16 @@ nb::tuple ecfp_reasoning_trace(const std::string& smiles,
                                int radius,
                                bool isomeric,
                                bool kekulize,
-                               bool include_per_center) {
+                               bool include_per_center,
+                               int fingerprint_size) {
     const unsigned int fp_radius =
         radius < 0 ? 0U : static_cast<unsigned int>(radius);
+    const std::size_t fp_bits =
+        fingerprint_size <= 0
+            ? kECFPReasoningFingerprintSize
+            : static_cast<std::size_t>(fingerprint_size);
     auto trace_result = ecfp_reasoning_trace_from_smiles(
-        smiles, fp_radius, isomeric, kekulize, include_per_center);
+        smiles, fp_radius, isomeric, kekulize, include_per_center, fp_bits);
     std::string trace = std::move(std::get<0>(trace_result));
     std::vector<std::uint8_t> fingerprint =
         std::move(std::get<1>(trace_result));

@@ -62,7 +62,9 @@ NB_MODULE(_rdktools_core, m) {
           "radius"_a = 2,
           "isomeric"_a = true,
           "kekulize"_a = false,
-          "include_per_center"_a = true);
+          "include_per_center"_a = true,
+          "fingerprint_size"_a =
+              static_cast<int>(rdktools::kECFPReasoningFingerprintSize));
     
     // Module version
     m.attr("__version__") = MACRO_STRINGIFY(VERSION_INFO);

@@ -19,6 +19,7 @@ ReasoningTraceResult ecfp_reasoning_trace_from_smiles(
     unsigned int radius,
     bool isomeric,
     bool kekulize,
-    bool include_per_center);
+    bool include_per_center,
+    std::size_t fingerprint_size = kECFPReasoningFingerprintSize);
 
 } // namespace rdktools

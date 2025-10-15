@@ -18,15 +18,22 @@ REGISTER_OP("StringProcess")
     .Input("input_strings: string")
     .Output("output_strings: string")
     .Output("output_fingerprints: uint8")
+    .Attr("fingerprint_size: int = 2048")
     .SetShapeFn([](::tensorflow::shape_inference::InferenceContext* c) {
+      int fingerprint_size = 0;
+      TF_RETURN_IF_ERROR(
+          c->GetAttr("fingerprint_size", &fingerprint_size));
+      if (fingerprint_size <= 0) {
+        return errors::InvalidArgument(
+            "fingerprint_size must be positive");
+      }
       // Output shape for traces matches input
       const auto input_shape = c->input(0);
       c->set_output(0, input_shape);
 
       // Fingerprint output has an extra trailing dimension for the bit vector
       ::tensorflow::shape_inference::ShapeHandle bit_vector =
-          c->Vector(static_cast<int64_t>(
-              rdktools::kECFPReasoningFingerprintSize));
+          c->Vector(static_cast<int64_t>(fingerprint_size));
       ::tensorflow::shape_inference::ShapeHandle fingerprint_shape;
       TF_RETURN_IF_ERROR(
           c->Concatenate(input_shape, bit_vector, &fingerprint_shape));
@@ -43,12 +50,17 @@ chain summary. Invalid SMILES yield the literal string "[invalid]".
 input_strings: A tensor of SMILES strings to analyse.
 output_strings: A tensor of reasoning traces with the same shape as input.
 output_fingerprints: A tensor containing Morgan bit vectors alongside each trace.
+fingerprint_size: Positive integer attribute selecting the fingerprint length.
 )doc");
 
 // Kernel implementation
-StringProcessOp::StringProcessOp(OpKernelConstruction* context) : OpKernel(context) {
-  // Constructor can be used to read attributes if needed
-  // For example: OP_REQUIRES_OK(context, context->GetAttr("some_attr", &some_value_));
+StringProcessOp::StringProcessOp(OpKernelConstruction* context)
+    : OpKernel(context) {
+  OP_REQUIRES_OK(context,
+                 context->GetAttr("fingerprint_size", &fingerprint_size_));
+  OP_REQUIRES(context, fingerprint_size_ > 0,
+              errors::InvalidArgument(
+                  "fingerprint_size must be positive"));
 }
 
 void StringProcessOp::Compute(OpKernelContext* context) {
@@ -68,7 +80,7 @@ void StringProcessOp::Compute(OpKernelContext* context) {
   Tensor* fingerprint_tensor = nullptr;
   TensorShape fingerprint_shape = input_tensor.shape();
   fingerprint_shape.AddDim(
-      static_cast<int64_t>(rdktools::kECFPReasoningFingerprintSize));
+      static_cast<int64_t>(fingerprint_size_));
   OP_REQUIRES_OK(context,
                  context->allocate_output(1, fingerprint_shape,
                                           &fingerprint_tensor));
@@ -84,20 +96,23 @@ void StringProcessOp::Compute(OpKernelContext* context) {
     rdktools::ReasoningTraceResult trace_result;
     try {
       trace_result = rdktools::ecfp_reasoning_trace_from_smiles(
-          smiles, 2U, true, false, true);
+          smiles, 2U, true, false, true,
+          static_cast<std::size_t>(fingerprint_size_));
     } catch (const std::exception& e) {
       trace_result = rdktools::ReasoningTraceResult(
           std::string("[error] ") + e.what(),
           std::vector<std::uint8_t>(
-              rdktools::kECFPReasoningFingerprintSize, 0));
+              static_cast<std::size_t>(fingerprint_size_), 0));
     }
 
     std::string trace = std::move(std::get<0>(trace_result));
     std::vector<std::uint8_t> fingerprint =
         std::move(std::get<1>(trace_result));
 
-    if (fingerprint.size() != rdktools::kECFPReasoningFingerprintSize) {
-      fingerprint.resize(rdktools::kECFPReasoningFingerprintSize, 0);
+    const std::size_t expected_size =
+        static_cast<std::size_t>(fingerprint_size_);
+    if (fingerprint.size() != expected_size) {
+      fingerprint.resize(expected_size, 0);
     }
 
     if (trace.empty()) {
@@ -111,8 +126,8 @@ void StringProcessOp::Compute(OpKernelContext* context) {
     }
 
     const int64_t base_index =
-        i * static_cast<int64_t>(rdktools::kECFPReasoningFingerprintSize);
-    for (std::size_t j = 0; j < fingerprint.size(); ++j) {
+        i * static_cast<int64_t>(fingerprint_size_);
+    for (std::size_t j = 0; j < expected_size; ++j) {
       fingerprint_flat(base_index + static_cast<int64_t>(j)) =
           fingerprint[j];
     }

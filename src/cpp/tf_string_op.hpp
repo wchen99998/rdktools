@@ -17,6 +17,7 @@ class StringProcessOp : public OpKernel {
   void Compute(OpKernelContext* context) override;
 
  private:
+  int64 fingerprint_size_ = 0;
   StringProcessOp(const StringProcessOp&) = delete;
   void operator=(const StringProcessOp&) = delete;
 };

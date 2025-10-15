@@ -270,6 +270,17 @@ class TestReasoningTrace:
         assert int(fp_base.sum()) > 12
         assert int(fp_variant.sum()) > 12
 
+    def test_ecfp_reasoning_trace_custom_fingerprint_size(self):
+        """Fingerprints should honour the requested bit length."""
+        trace, fingerprint = rdktools.ecfp_reasoning_trace(
+            "CCO", fingerprint_size=512
+        )
+
+        assert "r0:" in trace
+        assert fingerprint.dtype == np.uint8
+        assert fingerprint.shape == (512,)
+        assert fingerprint.sum() > 0
+
 
 class TestInputValidation:
     """Test input validation and error handling."""

@@ -164,6 +164,7 @@ def ecfp_reasoning_trace(
     isomeric: bool = True,
     kekulize: bool = False,
     include_per_center: bool = True,
+    fingerprint_size: int = ECFP_REASONING_FINGERPRINT_SIZE,
 ) -> Tuple[str, np.ndarray]:
     """
     Generate an ECFP reasoning trace for a single SMILES string.
@@ -174,6 +175,8 @@ def ecfp_reasoning_trace(
         isomeric: Whether to encode stereochemistry in SMARTS fragments
         kekulize: If true, kekulize the molecule before generating fragments
         include_per_center: Whether to append per-atom environment chains
+        fingerprint_size: Desired fingerprint length in bits (default: 2048).
+            Non-positive values fall back to the default length.
 
     Returns:
         Tuple where the first element is the multi-line reasoning trace text
@@ -184,13 +187,25 @@ def ecfp_reasoning_trace(
     _check_extension()
     if not isinstance(smiles, str):
         raise TypeError("SMILES input must be a string")
+    if not isinstance(fingerprint_size, int):
+        raise TypeError("fingerprint_size must be an int")
+    target_size = (
+        fingerprint_size
+        if fingerprint_size > 0
+        else ECFP_REASONING_FINGERPRINT_SIZE
+    )
     trace, fingerprint = _rdktools_core.ecfp_reasoning_trace(
-        smiles, radius, isomeric, kekulize, include_per_center
+        smiles,
+        radius,
+        isomeric,
+        kekulize,
+        include_per_center,
+        target_size,
     )
     fingerprint = np.asarray(fingerprint, dtype=np.uint8).reshape(-1)
-    if fingerprint.size != ECFP_REASONING_FINGERPRINT_SIZE:
-        padded = np.zeros(ECFP_REASONING_FINGERPRINT_SIZE, dtype=np.uint8)
-        length = min(fingerprint.size, ECFP_REASONING_FINGERPRINT_SIZE)
+    if target_size > 0 and fingerprint.size != target_size:
+        padded = np.zeros(target_size, dtype=np.uint8)
+        length = min(fingerprint.size, target_size)
         padded[:length] = fingerprint[:length]
         fingerprint = padded
     return trace, fingerprint
