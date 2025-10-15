@@ -344,18 +344,31 @@ target_compile_options(rdktools_tf_ops PRIVATE
 # enable the new C++11 ABI.
 target_compile_definitions(rdktools_tf_ops PRIVATE _GLIBCXX_USE_CXX11_ABI=1)
 
-target_link_options(rdktools_tf_ops PRIVATE
-    ${TF_LINK_FLAGS_LIST}
-)
+set(_rdktools_tf_link_flags "${TF_LINK_FLAGS_LIST}")
+if(UNIX AND NOT APPLE)
+    list(PREPEND _rdktools_tf_link_flags -Wl,--no-as-needed)
+endif()
+
+if(_rdktools_tf_link_flags)
+    target_link_options(rdktools_tf_ops PRIVATE ${_rdktools_tf_link_flags})
+endif()
 
 target_link_libraries(rdktools_tf_ops PRIVATE
     ${_rdkit_targets}
 )
 
+if(APPLE)
+    set(_rdktools_tf_rpath "@loader_path/../tensorflow")
+else()
+    set(_rdktools_tf_rpath "\$ORIGIN/../tensorflow")
+endif()
+
 set_target_properties(rdktools_tf_ops PROPERTIES
     PREFIX ""
     OUTPUT_NAME "rdktools_tf_ops"
     POSITION_INDEPENDENT_CODE ON
+    BUILD_RPATH "${_rdktools_tf_rpath}"
+    INSTALL_RPATH "${_rdktools_tf_rpath}"
 )
 
 install(TARGETS rdktools_tf_ops
