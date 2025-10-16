@@ -22,4 +22,14 @@ class StringProcessOp : public OpKernel {
   void operator=(const StringProcessOp&) = delete;
 };
 
+class FormulaProcessOp : public OpKernel {
+ public:
+  explicit FormulaProcessOp(OpKernelConstruction* context);
+  void Compute(OpKernelContext* context) override;
+
+ private:
+  FormulaProcessOp(const FormulaProcessOp&) = delete;
+  void operator=(const FormulaProcessOp&) = delete;
+};
+
 }  // namespace tensorflow

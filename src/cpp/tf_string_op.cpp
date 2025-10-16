@@ -7,7 +7,11 @@
 #include "tensorflow/core/framework/tensor_shape.h"
 #include "tensorflow/core/lib/core/status.h"
 #include "tensorflow/core/platform/logging.h"
+#include <GraphMol/Descriptors/MolDescriptors.h>
+#include <GraphMol/SmilesParse/SmilesParse.h>
+#include <GraphMol/GraphMol.h>
 #include <exception>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -136,5 +140,73 @@ void StringProcessOp::Compute(OpKernelContext* context) {
 
 // Register the kernel for CPU
 REGISTER_KERNEL_BUILDER(Name("StringProcess").Device(DEVICE_CPU), StringProcessOp);
+
+// Register the formula op
+REGISTER_OP("FormulaProcess")
+    .Input("input_strings: string")
+    .Output("output_strings: string")
+    .SetShapeFn([](::tensorflow::shape_inference::InferenceContext* c) {
+      const auto input_shape = c->input(0);
+      c->set_output(0, input_shape);
+      return ::tensorflow::OkStatus();
+    })
+    .Doc(R"doc(
+Generate molecular formula strings for SMILES tensors.
+
+Each input SMILES string is converted into `<formula>[SEP]<smiles>` using RDKit's
+molecular formula calculation. Invalid SMILES yield the literal string "[invalid]".
+
+input_strings: A tensor of SMILES strings to analyse.
+output_strings: A tensor of `<formula>[SEP]<smiles>` strings matching the input shape.
+)doc");
+
+FormulaProcessOp::FormulaProcessOp(OpKernelConstruction* context)
+    : OpKernel(context) {}
+
+void FormulaProcessOp::Compute(OpKernelContext* context) {
+  const Tensor& input_tensor = context->input(0);
+  OP_REQUIRES(context, input_tensor.dtype() == DT_STRING,
+              errors::InvalidArgument("Input must be of type string"));
+
+  Tensor* output_tensor = nullptr;
+  OP_REQUIRES_OK(context,
+                 context->allocate_output(0, input_tensor.shape(),
+                                          &output_tensor));
+
+  auto input_flat = input_tensor.flat<tstring>();
+  auto output_flat = output_tensor->flat<tstring>();
+
+  const int64_t num_elements = input_flat.size();
+  for (int64_t i = 0; i < num_elements; ++i) {
+    const std::string smiles = input_flat(i);
+
+    if (smiles.empty()) {
+      output_flat(i) = "";
+      continue;
+    }
+
+    std::string result;
+    try {
+      std::unique_ptr<RDKit::ROMol> mol(RDKit::SmilesToMol(smiles));
+      if (mol) {
+        const std::string formula =
+            RDKit::Descriptors::calcMolFormula(*mol);
+        result.reserve(formula.size() + 5 + smiles.size());
+        result.append(formula);
+        result.append("[SEP]");
+        result.append(smiles);
+      } else {
+        result = "[invalid]";
+      }
+    } catch (const std::exception& e) {
+      result = std::string("[error] ") + e.what();
+    }
+
+    output_flat(i) = std::move(result);
+  }
+}
+
+REGISTER_KERNEL_BUILDER(Name("FormulaProcess").Device(DEVICE_CPU),
+                        FormulaProcessOp);
 
 }  // namespace tensorflow

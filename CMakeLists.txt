@@ -338,12 +338,6 @@ target_compile_options(rdktools_tf_ops PRIVATE
     ${TF_COMPILE_FLAGS_LIST}
 )
 
-# Force the C++ ABI for the TensorFlow ops module to use the C++11 ABI where
-# required by some TF builds and prebuilt libraries. This ensures symbols
-# like those from libstdc++ match TensorFlow's expectations. Set to 1 to
-# enable the new C++11 ABI.
-target_compile_definitions(rdktools_tf_ops PRIVATE _GLIBCXX_USE_CXX11_ABI=1)
-
 target_link_options(rdktools_tf_ops PRIVATE
     ${TF_LINK_FLAGS_LIST}
 )

@@ -166,21 +166,21 @@ Calculate Morgan fingerprints as bit vectors.
 **Returns:**
 - 2D numpy array of shape (n_molecules, nbits) with dtype uint8
 
-#### `rdtools.ecfp_reasoning_trace(smiles, radius=2, *, isomeric=True, kekulize=False, include_per_center=True)`
+#### `rdtools.ecfp_reasoning_trace(smiles, radius=2, *, isomeric=True, kekulize=False, include_per_center=True, fingerprint_size=2048)`
 Generate a human-readable explanation of the environments that contribute to the ECFP (Morgan) fingerprint for a single SMILES string.
 
 **Returns:**
 - Tuple `(trace, fingerprint)` where `trace` is a multi-line string with
   aggregated tokens and optional per-atom environment chains, and `fingerprint`
-  is a NumPy array of shape `(2048,)` with dtype `uint8`.
+  is a NumPy array of shape `(fingerprint_size,)` with dtype `uint8`.
 
 **Example:**
 ```python
 import rdtools
 
-trace, fingerprint = rdtools.ecfp_reasoning_trace("CCO")
+trace, fingerprint = rdtools.ecfp_reasoning_trace("CCO", fingerprint_size=512)
 print(trace)
-print(fingerprint.shape)  # (2048,)
+print(fingerprint.shape)  # (512,)
 # r0: r0:[#6]×2, r0:[#8]×1
 # r1: r1:[#6]-[#6]×2
 #
@@ -208,12 +208,13 @@ TensorFlow custom operation for string processing in data pipelines.
 
 **Parameters:**
 - `smiles_tensor`: TensorFlow string tensor
+- `fingerprint_size`: Positive integer bit length (default: 2048)
 
 **Returns:**
 - Tuple `(traces, fingerprints)` where `traces` mirrors the input shape with
   string tensors of reasoning traces and `fingerprints` appends a trailing
-  dimension of length `2048` containing the uint8 bit vectors. Invalid inputs
-  yield `[invalid]` traces and zeroed fingerprints.
+  dimension of length `fingerprint_size` (default 2048) containing the uint8 bit
+  vectors. Invalid inputs yield `[invalid]` traces and zeroed fingerprints.
 
 **Example:**
 ```python
@@ -222,11 +223,15 @@ import rdtools.tf_ops
 
 # Use in tf.data pipeline
 dataset = tf.data.Dataset.from_tensor_slices(["CCO", "c1ccccc1"])
-dataset = dataset.map(rdtools.tf_ops.string_process)
+dataset = dataset.map(
+    lambda value: rdtools.tf_ops.string_process(
+        value, fingerprint_size=1024
+    )
+)
 
 for traces, fingerprints in dataset.take(1):
     print(traces.numpy()[0].decode())
-    print(fingerprints.numpy()[0].shape)
+    print(fingerprints.numpy()[0].shape)  # (1024,)
     # r0: ...
 ```
 

@@ -102,6 +102,25 @@ def string_process(
     )
 
 
+def formula_process(
+    input_strings: tf.Tensor,
+    name: Optional[str] = None,
+) -> tf.Tensor:
+    """
+    Generate `<formula>[SEP]<smiles>` strings for SMILES tensors.
+
+    Args:
+        input_strings: A string tensor to process.
+        name: Optional name for the operation.
+
+    Returns:
+        A string tensor matching the input shape containing the formatted
+        formula/SMILES strings. Invalid SMILES yield "[invalid]".
+    """
+    _check_tf_ops()
+    return _tf_ops_module.formula_process(input_strings, name=name)
+
+
 def create_tf_dataset_op(
     smiles,
     *,
@@ -169,6 +188,7 @@ def create_tf_dataset_op(
 # Export public API
 __all__ = [
     "string_process",
+    "formula_process",
     "create_tf_dataset_op",
 ]
 
