@@ -6,6 +6,7 @@ The following steps reproduce the wheel build and verification process starting 
    ```bash
    python3 -m venv --clear .venv
    .venv/bin/python -m pip install --upgrade pip
+   sudo apt install zlib1g-dev
    ```
 
 2. **Install build dependencies**
